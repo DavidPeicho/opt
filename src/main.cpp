@@ -91,18 +91,17 @@ int main() {
 #endif
 
     WGPUAdapterId adapter = { 0 };
-    wgpu_request_adapter_async(
-        &(WGPURequestAdapterOptions) {
-        .power_preference = WGPUPowerPreference_LowPower,
-            .compatible_surface = surface,
-    },
-        2 | 4 | 8,
-            request_adapter_callback,
-            (void*)&adapter
-            );
 
-    WGPUDeviceId device = wgpu_adapter_request_device(adapter,
-        &(WGPUDeviceDescriptor){
+    WGPURequestAdapterOptions adapterOptions{ .power_preference = WGPUPowerPreference_LowPower, .compatible_surface = surface };
+
+    wgpu_request_adapter_async(
+        &adapterOptions,
+        2 | 4 | 8,
+        request_adapter_callback,
+        (void*)&adapter
+    );
+
+    WGPUDeviceDescriptor deviceDescriptor{
         .extensions =
         {
             .anisotropic_filtering = false,
@@ -111,113 +110,112 @@ int main() {
         {
             .max_bind_groups = 1,
         },
-    });
+    };
 
-    WGPUShaderModuleId vertex_shader = wgpu_device_create_shader_module(device,
-        &(WGPUShaderModuleDescriptor){
+    WGPUDeviceId device = wgpu_adapter_request_device(adapter, &deviceDescriptor);
+
+    WGPUShaderModuleDescriptor vertexModuleDescriptor{
         .code = read_file("./../../data/triangle.vert.spv"),
-    });
-
-    WGPUShaderModuleId fragment_shader =
-        wgpu_device_create_shader_module(device,
-            &(WGPUShaderModuleDescriptor){
+    };
+    WGPUShaderModuleDescriptor fragmentModuleDescriptor{
         .code = read_file("./../../data/triangle.frag.spv"),
-    });
+    };
 
-    WGPUBindGroupLayoutId bind_group_layout =
-        wgpu_device_create_bind_group_layout(device,
-            &(WGPUBindGroupLayoutDescriptor){
+    WGPUShaderModuleId vertex_shader = wgpu_device_create_shader_module(device, &vertexModuleDescriptor);
+    WGPUShaderModuleId fragment_shader = wgpu_device_create_shader_module(device, &fragmentModuleDescriptor);
+
+    WGPUBindGroupLayoutDescriptor bindLayoutGroup {
         .label = "bind group layout",
             .entries = NULL,
             .entries_length = 0,
-    });
-    WGPUBindGroupId bind_group =
-        wgpu_device_create_bind_group(device,
-            &(WGPUBindGroupDescriptor){
+    };
+
+    WGPUBindGroupLayoutId bindLayoutGroupId = wgpu_device_create_bind_group_layout(device, &bindLayoutGroup);
+
+    WGPUBindGroupDescriptor bindGroupDesc{
         .label = "bind group",
-            .layout = bind_group_layout,
-            .entries = NULL,
-            .entries_length = 0,
-    });
+        .layout = bindLayoutGroupId,
+        .entries = NULL,
+        .entries_length = 0,
+    };
 
-    WGPUBindGroupLayoutId bind_group_layouts[BIND_GROUP_LAYOUTS_LENGTH] = {
-        bind_group_layout };
+    WGPUBindGroupId bindGroupId = wgpu_device_create_bind_group(device, &bindGroupDesc);
 
-    WGPUPipelineLayoutId pipeline_layout =
-        wgpu_device_create_pipeline_layout(device,
-            &(WGPUPipelineLayoutDescriptor){
+    WGPUBindGroupLayoutId bind_group_layouts[BIND_GROUP_LAYOUTS_LENGTH] = { bindLayoutGroupId };
+
+    WGPUPipelineLayoutDescriptor pipelineLayoutDesc{
         .bind_group_layouts = bind_group_layouts,
-            .bind_group_layouts_length = BIND_GROUP_LAYOUTS_LENGTH,
-    });
+        .bind_group_layouts_length = BIND_GROUP_LAYOUTS_LENGTH,
+    };
 
-    WGPURenderPipelineId render_pipeline =
-        wgpu_device_create_render_pipeline(device,
-            &(WGPURenderPipelineDescriptor){
+    WGPUPipelineLayoutId pipeline_layout = wgpu_device_create_pipeline_layout(device, &pipelineLayoutDesc);
+
+    WGPUProgrammableStageDescriptor fragmentStage {
+        .module = fragment_shader,
+        .entry_point = "main"
+    };
+
+    WGPUColorStateDescriptor colorStateDescriptor{
+        .format = WGPUTextureFormat_Bgra8Unorm,
+        .alpha_blend = {
+            .src_factor = WGPUBlendFactor_One,
+            .dst_factor = WGPUBlendFactor_Zero,
+            .operation = WGPUBlendOperation_Add,
+        },
+        .color_blend = {
+            .src_factor = WGPUBlendFactor_One,
+            .dst_factor = WGPUBlendFactor_Zero,
+            .operation = WGPUBlendOperation_Add,
+        },
+        .write_mask = WGPUColorWrite_ALL,
+    };
+
+    WGPURasterizationStateDescriptor rasterizationStateDes{
+        .front_face = WGPUFrontFace_Ccw,
+        .cull_mode = WGPUCullMode_None,
+        .depth_bias = 0,
+        .depth_bias_slope_scale = 0.0,
+        .depth_bias_clamp = 0.0,
+    };
+
+    WGPURenderPipelineDescriptor renderPipelineDesc {
         .layout = pipeline_layout,
-            .vertex_stage =
-            (WGPUProgrammableStageDescriptor){
-                .module = vertex_shader,
-                .entry_point = "main",
+        .vertex_stage = { .module = vertex_shader, .entry_point = "main" },
+        .fragment_stage = &fragmentStage,
+        .rasterization_state = &rasterizationStateDes,
+        .vertex_state = {
+            .index_format = WGPUIndexFormat_Uint16,
+            .vertex_buffers = NULL,
+            .vertex_buffers_length = 0,
         },
-        .fragment_stage =
-        &(WGPUProgrammableStageDescriptor) {
-            .module = fragment_shader,
-                .entry_point = "main",
-        },
-            .rasterization_state =
-                &(WGPURasterizationStateDescriptor) {
-                .front_face = WGPUFrontFace_Ccw,
-                    .cull_mode = WGPUCullMode_None,
-                    .depth_bias = 0,
-                    .depth_bias_slope_scale = 0.0,
-                    .depth_bias_clamp = 0.0,
-            },
-                .primitive_topology = WGPUPrimitiveTopology_TriangleList,
-                    .color_states =
-                    &(WGPUColorStateDescriptor) {
-                    .format = WGPUTextureFormat_Bgra8Unorm,
-                        .alpha_blend =
-                        (WGPUBlendDescriptor){
-                            .src_factor = WGPUBlendFactor_One,
-                            .dst_factor = WGPUBlendFactor_Zero,
-                            .operation = WGPUBlendOperation_Add,
-                    },
-                    .color_blend =
-                    (WGPUBlendDescriptor){
-                        .src_factor = WGPUBlendFactor_One,
-                        .dst_factor = WGPUBlendFactor_Zero,
-                        .operation = WGPUBlendOperation_Add,
-                    },
-                    .write_mask = WGPUColorWrite_ALL,
-                },
-                .color_states_length = 1,
-                .depth_stencil_state = NULL,
-                .vertex_state =
-                (WGPUVertexStateDescriptor){
-                    .index_format = WGPUIndexFormat_Uint16,
-                    .vertex_buffers = NULL,
-                    .vertex_buffers_length = 0,
-                    },
-                    .sample_count = 1,
-    });
+        .primitive_topology = WGPUPrimitiveTopology_TriangleList,
+        .color_states = &colorStateDescriptor,
+        .color_states_length = 1,
+        .depth_stencil_state = NULL,
+        .sample_count = 1,
+    };
+
+    WGPURenderPipelineId render_pipeline = wgpu_device_create_render_pipeline(device, &renderPipelineDesc);
 
     int prev_width = 0;
     int prev_height = 0;
     glfwGetWindowSize(window, &prev_width, &prev_height);
 
-    WGPUSwapChainId swap_chain = wgpu_device_create_swap_chain(device, surface,
-        &(WGPUSwapChainDescriptor){
+    WGPUSwapChainDescriptor swapChainDesc{
         .usage = WGPUTextureUsage_OUTPUT_ATTACHMENT,
             .format = WGPUTextureFormat_Bgra8Unorm,
             .width = prev_width,
             .height = prev_height,
             .present_mode = WGPUPresentMode_Fifo,
-    });
+    };
+
+    WGPUSwapChainId swap_chain = wgpu_device_create_swap_chain(device, surface, &swapChainDesc);
 
     while (!glfwWindowShouldClose(window)) {
         int width = 0;
         int height = 0;
         glfwGetWindowSize(window, &width, &height);
+
         if (width != prev_width || height != prev_height) {
             prev_width = width;
             prev_height = height;
