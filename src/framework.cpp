@@ -18,12 +18,12 @@ WGPUU32Array read_file(const char *name) {
     }
     fseek(file, 0, SEEK_END);
     long length = ftell(file);
-    unsigned char *bytes = malloc(length);
+    unsigned char *bytes = new unsigned char[length];
     fseek(file, 0, SEEK_SET);
     fread(bytes, 1, length, file);
     fclose(file);
     return (WGPUU32Array){
         .bytes = (uint32_t*) bytes,
-        .length = length / 4,
+        .length = static_cast<uintptr_t>(length / 4),
     };
 }
