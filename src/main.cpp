@@ -55,7 +55,7 @@ createInputBuffer(WGPUDeviceId deviceId, uint16_t width, uint16_t height)
     WGPUBufferDescriptor descriptor {
         .label = "buffer",
         .size = nbElements * sizeof(glm::vec3),
-        .usage = WGPUBufferUsage_STORAGE,
+        .usage = WGPUBufferUsage_STORAGE_READ,
     };
 
     WGPUBufferId buffer = wgpu_device_create_buffer_mapped(deviceId, &descriptor, &staging_memory);
