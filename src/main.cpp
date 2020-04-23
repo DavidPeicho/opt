@@ -9,6 +9,7 @@
 
 #include <framework.h>
 #include <stdio.h>
+#include <iostream>
 #include <stdlib.h>
 #include <vector>
 
@@ -73,19 +74,20 @@ createInputBuffer(WGPUDeviceId deviceId, uint16_t width, uint16_t height)
 WGPUBufferId
 createOutputBuffer(WGPUDeviceId deviceId, uint16_t width, uint16_t height)
 {
-    uint8_t *staging_memory;
-
     size_t nbElements = width * height;
 
     WGPUBufferDescriptor descriptor {
-        .label = "buffer",
+        .label = "buffer 2",
         .size = nbElements * sizeof(glm::vec3),
-        .usage = WGPUBufferUsage_STORAGE,
+        .usage = WGPUBufferUsage_STORAGE | WGPUBufferUsage_STORAGE_READ | WGPUBufferUsage_COPY_DST,
     };
 
     WGPUBufferId buffer = wgpu_device_create_buffer(deviceId, &descriptor);
+
     return buffer;
 }
+
+WGPUBufferId gBufferRays = 0;
 
 WGPUComputePipelineId createComputePipeline(
     WGPUDeviceId deviceId,
@@ -106,11 +108,13 @@ WGPUComputePipelineId createComputePipeline(
         }
     };
 
+    gBufferRays = createOutputBuffer(deviceId, width, height);
+
     // Creates output resource
     WGPUBindingResource outputResource = {
 		.tag = WGPUBindingResource_Buffer,
         .buffer = (WGPUBufferBinding) {
-            .buffer = createOutputBuffer(deviceId, width, height),
+            .buffer = gBufferRays,
             .size = nbElements * sizeof(glm::vec3),
             .offset = 0
         }
@@ -243,28 +247,57 @@ int main() {
     WGPUDeviceId device = wgpu_adapter_request_device(adapter, &deviceDescriptor);
 
     WGPUShaderModuleDescriptor vertexModuleDescriptor{
-        .code = read_file("../triangle.vert.spv"),
+        .code = read_file("../src/shaders/pathtracing.vert.spv"),
     };
     WGPUShaderModuleDescriptor fragmentModuleDescriptor{
-        .code = read_file("../triangle.frag.spv"),
+        .code = read_file("../src/shaders/pathtracing.frag.spv"),
     };
 
     WGPUShaderModuleId vertex_shader = wgpu_device_create_shader_module(device, &vertexModuleDescriptor);
     WGPUShaderModuleId fragment_shader = wgpu_device_create_shader_module(device, &fragmentModuleDescriptor);
 
-    WGPUBindGroupLayoutDescriptor bindLayoutGroup {
-        .label = "bind group layout",
-            .entries = NULL,
-            .entries_length = 0,
+    WGPUBindGroupId computeBingGroupId;
+    auto computePipeline = createComputePipeline(device, 640, 480, &computeBingGroupId);
+
+    const WGPUBindGroupLayoutEntry layoutEntries[1] = {
+        {
+            .binding = 0,
+            .visibility = WGPUShaderStage_FRAGMENT,
+            .ty = WGPUBindingType_ReadonlyStorageBuffer
+        }
     };
 
-    WGPUBindGroupLayoutId bindLayoutGroupId = wgpu_device_create_bind_group_layout(device, &bindLayoutGroup);
+    WGPUBindGroupLayoutDescriptor bindLayoutGroupDesriptor {
+        .label = "bind group layout 2",
+        .entries = layoutEntries,
+        .entries_length = 1,
+    };
 
-    WGPUBindGroupDescriptor bindGroupDesc{
-        .label = "bind group",
+    WGPUBindGroupLayoutId bindLayoutGroupId = wgpu_device_create_bind_group_layout(device, &bindLayoutGroupDesriptor);
+
+    size_t nbElements = 640 * 480;
+
+    WGPUBindingResource inputResource = {
+		.tag = WGPUBindingResource_Buffer,
+        .buffer = (WGPUBufferBinding) {
+            .buffer = gBufferRays,
+            .size = nbElements * sizeof(glm::vec3),
+            .offset = 0
+        }
+    };
+
+    const WGPUBindGroupEntry entries[1] = {
+        {
+            .binding = 0,
+			.resource = inputResource
+        }
+    };
+
+    WGPUBindGroupDescriptor bindGroupDesc {
+        .label = "bind group 2",
         .layout = bindLayoutGroupId,
-        .entries = NULL,
-        .entries_length = 0,
+        .entries = entries,
+        .entries_length = 1,
     };
 
     WGPUBindGroupId bindGroupId = wgpu_device_create_bind_group(device, &bindGroupDesc);
@@ -325,9 +358,6 @@ int main() {
 
     WGPURenderPipelineId render_pipeline = wgpu_device_create_render_pipeline(device, &renderPipelineDesc);
 
-    WGPUBindGroupId computeBingGroupId;
-    auto computePipeline = createComputePipeline(device, 640, 480, &computeBingGroupId);
-
     int prev_width = 0;
     int prev_height = 0;
     glfwGetWindowSize(window, &prev_width, &prev_height);
@@ -368,32 +398,23 @@ int main() {
             return 1;
         }
 
-        WGPUCommandBufferId cmdBuffers[2];
-
         // 1. Run compute shader
 
         WGPUCommandEncoderDescriptor computeCommandEncoderDescription {
             .label = "command encoder"
         };
-        WGPUCommandEncoderId computeEncoder = wgpu_device_create_command_encoder(
+
+        WGPUCommandEncoderId cmd_encoder = wgpu_device_create_command_encoder(
             device, &computeCommandEncoderDescription
         );
 
-        WGPUComputePassId computePassId = wgpu_command_encoder_begin_compute_pass(computeEncoder, NULL);
+        WGPUComputePassId computePassId = wgpu_command_encoder_begin_compute_pass(cmd_encoder, NULL);
         wgpu_compute_pass_set_pipeline(computePassId, computePipeline);
         wgpu_compute_pass_set_bind_group(computePassId, 0, computeBingGroupId, NULL, 0);
         wgpu_compute_pass_dispatch(computePassId, 640 * 480, 1, 1);
         wgpu_compute_pass_end_pass(computePassId);
 
-        cmdBuffers[0] = wgpu_command_encoder_finish(computeEncoder, NULL);
-
         // 2. Blit to swap chain
-
-        WGPUCommandEncoderDescriptor commandEncorerDesc {
-          .label = "command encoder"
-        };
-
-        WGPUCommandEncoderId cmd_encoder = wgpu_device_create_command_encoder(device, &commandEncorerDesc);
 
         WGPURenderPassColorAttachmentDescriptor
             color_attachments[ATTACHMENTS_LENGTH] = {
@@ -420,9 +441,9 @@ int main() {
 
         WGPUQueueId queue = wgpu_device_get_default_queue(device);
 
-        cmdBuffers[1] = wgpu_command_encoder_finish(cmd_encoder, NULL);
+        auto cmdBuffer = wgpu_command_encoder_finish(cmd_encoder, NULL);
 
-        wgpu_queue_submit(queue, const_cast<const WGPUCommandBufferId*>(cmdBuffers), 2);
+        wgpu_queue_submit(queue, const_cast<const WGPUCommandBufferId*>(&cmdBuffer), 1);
 
         wgpu_swap_chain_present(swap_chain);
 
