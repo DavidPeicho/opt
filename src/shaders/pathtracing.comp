@@ -2,6 +2,8 @@
 
 layout(local_size_x = 1) in;
 
+layout(set = 0, binding = 2, rgba16f) uniform writeonly image2D uTexture;
+
 struct Ray {
   vec3 color;
 };
@@ -15,6 +17,9 @@ layout(std430, set = 0, binding = 1) buffer RayOut {
 };
 
 void main() {
-    vec3 c = colors[gl_GlobalInvocationID.x];
-    results[gl_GlobalInvocationID.x].color = vec3(0.0, 1.0, 0.0);
+  // vec3 c = colors[gl_GlobalInvocationID.x];
+  // results[gl_GlobalInvocationID.x].color = c;
+  ivec2 idx = ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
+  vec2 uv = vec2(float(idx.x) / 640.0, float(idx.y) / 480.0);
+  imageStore(uTexture, idx, vec4(uv * 0.5 + 0.5, 0.0, 1.0));
 }

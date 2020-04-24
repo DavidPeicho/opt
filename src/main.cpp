@@ -63,12 +63,12 @@ createInputBuffer(WGPUDeviceId deviceId, uint16_t width, uint16_t height)
 
     glm::vec3* ptr = (glm::vec3*)staging_memory;
     for (size_t i = 0; i < nbElements; ++i) {
-        ptr[i] = glm::vec3(1.0, 0.0, 0.0);
+        ptr[i] = glm::vec3((double)(i % 2), 0.0, 0.0);
     }
 
 	wgpu_buffer_unmap(buffer);
 
-    return buffer;
+  return buffer;
 }
 
 WGPUBufferId
@@ -88,6 +88,8 @@ createOutputBuffer(WGPUDeviceId deviceId, uint16_t width, uint16_t height)
 }
 
 WGPUBufferId gBufferRays = 0;
+WGPUTextureId gRenderTargetId = 0;
+WGPUTextureViewId gRenderTargetView = 0;
 
 WGPUComputePipelineId createComputePipeline(
     WGPUDeviceId deviceId,
@@ -120,7 +122,14 @@ WGPUComputePipelineId createComputePipeline(
         }
     };
 
-    const WGPUBindGroupLayoutEntry layoutEntries[2] = {
+    // Creates output resource
+
+    WGPUBindingResource textureResource = {
+      .tag = WGPUBindingResource_TextureView,
+      .texture_view = gRenderTargetView
+    };
+
+    const WGPUBindGroupLayoutEntry layoutEntries[3] = {
         {
             .binding = 0,
             .visibility = WGPUShaderStage_COMPUTE,
@@ -131,25 +140,32 @@ WGPUComputePipelineId createComputePipeline(
             .visibility = WGPUShaderStage_COMPUTE,
             .ty = WGPUBindingType_StorageBuffer
         },
-
+        {
+            .binding = 2,
+            .visibility = WGPUShaderStage_COMPUTE,
+            .ty = WGPUBindingType_WriteonlyStorageTexture
+        },
     };
 
-    const WGPUBindGroupEntry entries[2] = {
+    const WGPUBindGroupEntry entries[3] = {
         {
             .binding = 0,
-			.resource = inputResource
+			      .resource = inputResource
         },
         {
             .binding = 1,
-			.resource = outputResource
+			      .resource = outputResource
         },
-
+        {
+            .binding = 2,
+			      .resource = textureResource
+        }
     };
 
     WGPUBindGroupLayoutDescriptor bindGroupLayoutDescriptor {
         .label = "bind group layout",
         .entries = layoutEntries,
-        .entries_length = 2
+        .entries_length = 3
     };
 
     WGPUBindGroupLayoutId bindGroupLayout = wgpu_device_create_bind_group_layout(deviceId, &bindGroupLayoutDescriptor);
@@ -161,7 +177,7 @@ WGPUComputePipelineId createComputePipeline(
         .label = "bind group",
         .layout = bindGroupLayout,
         .entries = entries,
-        .entries_length = 2
+        .entries_length = 3
     };
 
     *bindGroupId = wgpu_device_create_bind_group(deviceId, &bindGroupDescriptor);
@@ -246,11 +262,59 @@ int main() {
 
     WGPUDeviceId device = wgpu_adapter_request_device(adapter, &deviceDescriptor);
 
+    // Render target
+    WGPUTextureDescriptor renderTargetDescriptor {
+      .label = "render targert",
+      .size = WGPUExtent3d {
+        .width = 640,
+        .height = 480,
+        .depth = 1
+      },
+      .mip_level_count = 1,
+      .sample_count = 1, // TODO: fill an issue. If this is left out, an overflow
+      // occurs here: https://github.com/gfx-rs/wgpu/blob/master/wgpu-core/src/conv.rs#L438
+      .dimension = WGPUTextureDimension_D2,
+      .format = WGPUTextureFormat_Rgba16Float,
+      .usage = WGPUTextureUsage_SAMPLED | WGPUTextureUsage_STORAGE
+    };
+
+    gRenderTargetId = wgpu_device_create_texture(
+      device,
+      &renderTargetDescriptor
+    );
+
+    WGPUTextureViewDescriptor textureViewDescriptor {
+      .format = WGPUTextureFormat_Rgba16Float,
+      .dimension = WGPUTextureViewDimension_D2,
+      .aspect = WGPUTextureAspect_All,
+      .base_mip_level = 0,
+      .level_count = 0,
+      .base_array_layer = 0,
+      .array_layer_count = 0
+    };
+    gRenderTargetView = wgpu_texture_create_view(
+      gRenderTargetId,
+      &textureViewDescriptor
+    );
+
+    WGPUSamplerDescriptor textureSamplerDescriptor {
+      .address_mode_u = WGPUAddressMode_ClampToEdge,
+      .address_mode_v = WGPUAddressMode_ClampToEdge,
+      .address_mode_w = WGPUAddressMode_ClampToEdge,
+      .mag_filter = WGPUFilterMode_Nearest,
+      .min_filter = WGPUFilterMode_Nearest,
+      .mipmap_filter = WGPUFilterMode_Nearest,
+      .lod_min_clamp = 0,
+      .lod_max_clamp = 0xffffffff,
+      .compare = WGPUCompareFunction_Equal
+    };
+    auto textureSampler = wgpu_device_create_sampler(device, &textureSamplerDescriptor);
+
     WGPUShaderModuleDescriptor vertexModuleDescriptor{
-        .code = read_file("../src/shaders/pathtracing.vert.spv"),
+        .code = read_file("../src/shaders/blitting.vert.spv"),
     };
     WGPUShaderModuleDescriptor fragmentModuleDescriptor{
-        .code = read_file("../src/shaders/pathtracing.frag.spv"),
+        .code = read_file("../src/shaders/blitting.frag.spv"),
     };
 
     WGPUShaderModuleId vertex_shader = wgpu_device_create_shader_module(device, &vertexModuleDescriptor);
@@ -259,18 +323,28 @@ int main() {
     WGPUBindGroupId computeBingGroupId;
     auto computePipeline = createComputePipeline(device, 640, 480, &computeBingGroupId);
 
-    const WGPUBindGroupLayoutEntry layoutEntries[1] = {
+    const WGPUBindGroupLayoutEntry layoutEntries[3] = {
         {
             .binding = 0,
             .visibility = WGPUShaderStage_FRAGMENT,
             .ty = WGPUBindingType_ReadonlyStorageBuffer
-        }
+        },
+        {
+            .binding = 1,
+            .visibility = WGPUShaderStage_FRAGMENT,
+            .ty = WGPUBindingType_Sampler
+        },
+        {
+            .binding = 2,
+            .visibility = WGPUShaderStage_FRAGMENT,
+            .ty = WGPUBindingType_SampledTexture
+        },
     };
 
     WGPUBindGroupLayoutDescriptor bindLayoutGroupDesriptor {
         .label = "bind group layout 2",
         .entries = layoutEntries,
-        .entries_length = 1,
+        .entries_length = 3,
     };
 
     WGPUBindGroupLayoutId bindLayoutGroupId = wgpu_device_create_bind_group_layout(device, &bindLayoutGroupDesriptor);
@@ -286,10 +360,28 @@ int main() {
         }
     };
 
-    const WGPUBindGroupEntry entries[1] = {
+    WGPUBindingResource samplerResource = {
+      .tag = WGPUBindingResource_Sampler,
+      .sampler = textureSampler
+    };
+
+    WGPUBindingResource textureResource = {
+      .tag = WGPUBindingResource_TextureView,
+      .texture_view = gRenderTargetView
+    };
+
+    const WGPUBindGroupEntry entries[3] = {
         {
             .binding = 0,
-			.resource = inputResource
+			      .resource = inputResource
+        },
+        {
+            .binding = 1,
+			      .resource = samplerResource
+        },
+        {
+            .binding = 2,
+			      .resource = textureResource
         }
     };
 
@@ -297,7 +389,7 @@ int main() {
         .label = "bind group 2",
         .layout = bindLayoutGroupId,
         .entries = entries,
-        .entries_length = 1,
+        .entries_length = 3,
     };
 
     WGPUBindGroupId bindGroupId = wgpu_device_create_bind_group(device, &bindGroupDesc);
@@ -411,7 +503,7 @@ int main() {
         WGPUComputePassId computePassId = wgpu_command_encoder_begin_compute_pass(cmd_encoder, NULL);
         wgpu_compute_pass_set_pipeline(computePassId, computePipeline);
         wgpu_compute_pass_set_bind_group(computePassId, 0, computeBingGroupId, NULL, 0);
-        wgpu_compute_pass_dispatch(computePassId, 640 * 480, 1, 1);
+        wgpu_compute_pass_dispatch(computePassId, 640, 480, 1);
         wgpu_compute_pass_end_pass(computePassId);
 
         // 2. Blit to swap chain
@@ -422,7 +514,7 @@ int main() {
                     .attachment = next_texture.view_id,
                     .load_op = WGPULoadOp_Clear,
                     .store_op = WGPUStoreOp_Store,
-                    .clear_color = WGPUColor_GREEN,
+                    .clear_color = WGPUColor_RED,
                 },
         };
 
