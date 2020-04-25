@@ -42,6 +42,10 @@
 #define RENDER_PASS_ATTACHMENTS_LENGTH (1)
 #define BIND_GROUP_LAYOUTS_LENGTH (1)
 
+struct Intersection {
+  float distance;
+};
+
 void request_adapter_callback(WGPUAdapterId received, void* userdata) {
     *(WGPUAdapterId*)userdata = received;
 }
@@ -55,15 +59,21 @@ createInputBuffer(WGPUDeviceId deviceId, uint16_t width, uint16_t height)
 
     WGPUBufferDescriptor descriptor {
         .label = "buffer",
-        .size = nbElements * sizeof(glm::vec3),
+        .size = nbElements * sizeof(Intersection),
         .usage = WGPUBufferUsage_STORAGE_READ,
     };
 
     WGPUBufferId buffer = wgpu_device_create_buffer_mapped(deviceId, &descriptor, &staging_memory);
 
-    glm::vec3* ptr = (glm::vec3*)staging_memory;
+    auto* ptr = (Intersection*)staging_memory;
     for (size_t i = 0; i < nbElements; ++i) {
-        ptr[i] = glm::vec3((double)(i % 2), 0.0, 0.0);
+      auto x = i % 640;
+      auto y = i / 640;
+      if (x >= 220 && x <= 440 && y >= 140 && y <= 340) {
+        ptr[i].distance = 1.0;
+      } else {
+        ptr[i].distance = -1.0;
+      }
     }
 
 	wgpu_buffer_unmap(buffer);
@@ -71,23 +81,6 @@ createInputBuffer(WGPUDeviceId deviceId, uint16_t width, uint16_t height)
   return buffer;
 }
 
-WGPUBufferId
-createOutputBuffer(WGPUDeviceId deviceId, uint16_t width, uint16_t height)
-{
-    size_t nbElements = width * height;
-
-    WGPUBufferDescriptor descriptor {
-        .label = "buffer 2",
-        .size = nbElements * sizeof(glm::vec3),
-        .usage = WGPUBufferUsage_STORAGE | WGPUBufferUsage_STORAGE_READ | WGPUBufferUsage_COPY_DST,
-    };
-
-    WGPUBufferId buffer = wgpu_device_create_buffer(deviceId, &descriptor);
-
-    return buffer;
-}
-
-WGPUBufferId gBufferRays = 0;
 WGPUTextureId gRenderTargetId = 0;
 WGPUTextureViewId gRenderTargetView = 0;
 
@@ -105,31 +98,18 @@ WGPUComputePipelineId createComputePipeline(
 		.tag = WGPUBindingResource_Buffer,
         .buffer = (WGPUBufferBinding) {
             .buffer = createInputBuffer(deviceId, width, height),
-            .size = nbElements * sizeof(glm::vec3),
-            .offset = 0
-        }
-    };
-
-    gBufferRays = createOutputBuffer(deviceId, width, height);
-
-    // Creates output resource
-    WGPUBindingResource outputResource = {
-		.tag = WGPUBindingResource_Buffer,
-        .buffer = (WGPUBufferBinding) {
-            .buffer = gBufferRays,
-            .size = nbElements * sizeof(glm::vec3),
+            .size = nbElements * sizeof(Intersection),
             .offset = 0
         }
     };
 
     // Creates output resource
-
     WGPUBindingResource textureResource = {
       .tag = WGPUBindingResource_TextureView,
       .texture_view = gRenderTargetView
     };
 
-    const WGPUBindGroupLayoutEntry layoutEntries[3] = {
+    const WGPUBindGroupLayoutEntry layoutEntries[2] = {
         {
             .binding = 0,
             .visibility = WGPUShaderStage_COMPUTE,
@@ -138,26 +118,17 @@ WGPUComputePipelineId createComputePipeline(
         {
             .binding = 1,
             .visibility = WGPUShaderStage_COMPUTE,
-            .ty = WGPUBindingType_StorageBuffer
-        },
-        {
-            .binding = 2,
-            .visibility = WGPUShaderStage_COMPUTE,
             .ty = WGPUBindingType_WriteonlyStorageTexture
         },
     };
 
-    const WGPUBindGroupEntry entries[3] = {
+    const WGPUBindGroupEntry entries[2] = {
         {
             .binding = 0,
 			      .resource = inputResource
         },
         {
             .binding = 1,
-			      .resource = outputResource
-        },
-        {
-            .binding = 2,
 			      .resource = textureResource
         }
     };
@@ -165,7 +136,7 @@ WGPUComputePipelineId createComputePipeline(
     WGPUBindGroupLayoutDescriptor bindGroupLayoutDescriptor {
         .label = "bind group layout",
         .entries = layoutEntries,
-        .entries_length = 3
+        .entries_length = 2
     };
 
     WGPUBindGroupLayoutId bindGroupLayout = wgpu_device_create_bind_group_layout(deviceId, &bindGroupLayoutDescriptor);
@@ -177,7 +148,7 @@ WGPUComputePipelineId createComputePipeline(
         .label = "bind group",
         .layout = bindGroupLayout,
         .entries = entries,
-        .entries_length = 3
+        .entries_length = 2
     };
 
     *bindGroupId = wgpu_device_create_bind_group(deviceId, &bindGroupDescriptor);
@@ -323,19 +294,14 @@ int main() {
     WGPUBindGroupId computeBingGroupId;
     auto computePipeline = createComputePipeline(device, 640, 480, &computeBingGroupId);
 
-    const WGPUBindGroupLayoutEntry layoutEntries[3] = {
+    const WGPUBindGroupLayoutEntry layoutEntries[2] = {
         {
             .binding = 0,
-            .visibility = WGPUShaderStage_FRAGMENT,
-            .ty = WGPUBindingType_ReadonlyStorageBuffer
-        },
-        {
-            .binding = 1,
             .visibility = WGPUShaderStage_FRAGMENT,
             .ty = WGPUBindingType_Sampler
         },
         {
-            .binding = 2,
+            .binding = 1,
             .visibility = WGPUShaderStage_FRAGMENT,
             .ty = WGPUBindingType_SampledTexture
         },
@@ -344,21 +310,12 @@ int main() {
     WGPUBindGroupLayoutDescriptor bindLayoutGroupDesriptor {
         .label = "bind group layout 2",
         .entries = layoutEntries,
-        .entries_length = 3,
+        .entries_length = 2,
     };
 
     WGPUBindGroupLayoutId bindLayoutGroupId = wgpu_device_create_bind_group_layout(device, &bindLayoutGroupDesriptor);
 
     size_t nbElements = 640 * 480;
-
-    WGPUBindingResource inputResource = {
-		.tag = WGPUBindingResource_Buffer,
-        .buffer = (WGPUBufferBinding) {
-            .buffer = gBufferRays,
-            .size = nbElements * sizeof(glm::vec3),
-            .offset = 0
-        }
-    };
 
     WGPUBindingResource samplerResource = {
       .tag = WGPUBindingResource_Sampler,
@@ -370,17 +327,13 @@ int main() {
       .texture_view = gRenderTargetView
     };
 
-    const WGPUBindGroupEntry entries[3] = {
+    const WGPUBindGroupEntry entries[2] = {
         {
             .binding = 0,
-			      .resource = inputResource
-        },
-        {
-            .binding = 1,
 			      .resource = samplerResource
         },
         {
-            .binding = 2,
+            .binding = 1,
 			      .resource = textureResource
         }
     };
@@ -389,7 +342,7 @@ int main() {
         .label = "bind group 2",
         .layout = bindLayoutGroupId,
         .entries = entries,
-        .entries_length = 3,
+        .entries_length = 2,
     };
 
     WGPUBindGroupId bindGroupId = wgpu_device_create_bind_group(device, &bindGroupDesc);
