@@ -1,0 +1,53 @@
+#version 450
+
+struct Vertex {
+  vec4 position;
+  vec4 normal;
+  vec4 tangent;
+  vec2 uv;
+  vec2 padding_0;
+};
+
+struct Instance {
+  // mat4x3 transformMatrix;
+  // vec4 padding_0;
+  // mat4x4 normalMatrix;
+  uint vertexIndex;
+  uint faceIndex;
+  uint faceCount;
+  uint materialIndex;
+};
+
+struct Material {
+  vec4 color;
+};
+
+struct Intersection {
+  vec2 coords;
+  uint faceIndex;
+  uint padding_0;
+};
+
+layout (set = 0, binding = 0, std430) readonly buffer VertexBuffer {
+  Vertex vertices[];
+};
+
+layout (set = 0, binding = 1, std430) readonly buffer FaceBuffer {
+  uint faces[];
+};
+
+layout (set = 0, binding = 2, std140) readonly buffer InstanceBuffer {
+  Instance instances[];
+};
+
+layout(set = 0, binding = 3, std140) writeonly buffer IntersectionBuffer {
+  Intersection results[];
+};
+
+void main() {
+  // Performs intersection.
+
+  // Loop through instances BVH.
+  // Find triangle in BVH.
+  // Sort.
+}

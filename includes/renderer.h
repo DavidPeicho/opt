@@ -1,6 +1,10 @@
 #pragma once
 
-namespace filament
+#include <vector>
+
+#include "geometry.h"
+
+namespace albedo
 {
 
 class Renderer
@@ -8,7 +12,9 @@ class Renderer
   // public:
 
 
-    // private:
+  private:
+
+    std::vector<scene::Geometry> _geometries;
 
 };
 
