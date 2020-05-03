@@ -1,11 +1,6 @@
 #pragma once
 
-#include <vector>
-
 namespace albedo
-{
-
-namespace scene
 {
 
 class Instance {
@@ -18,6 +13,11 @@ class Instance {
     Instance() noexcept
       : m_ID(++globalId)
     { }
+
+    size_t
+    operator()() const {
+      return m_ID;
+    }
 
     bool
     operator==(Instance e) const { return e.m_ID == m_ID; }
@@ -33,29 +33,8 @@ class Instance {
     getId() const noexcept { return m_ID; }
 
   private:
-    static std::atomic<Size> globalId{0};
     Size m_ID = 0;
+    static std::atomic<Instance::Size> globalId;
 };
 
-class Scene
-{
-  public:
-    Scene();
-
-  public:
-
-    Instance
-    createInstance();
-
-    void
-    deleteInstance();
-
-  private:
-    std::unordered_map<Instance, Instance::Size> m_EntityToIndex;
-
-};
-
-} // nanespace scene
-
-} // nanespace albedo
-
+}

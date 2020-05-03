@@ -1,3 +1,5 @@
-cmake_minimum_required(VERSION 3.11b)
+cmake_minimum_required(VERSION 3.13)
 
-add_subdirectory(acceleration)
+target_sources(webtracer PRIVATE scene.cpp)
+
+add_subdirectory(plugins)

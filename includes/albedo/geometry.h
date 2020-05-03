@@ -3,11 +3,12 @@
 #include <glm/glm.hpp>
 #include <vector>
 
+#include <albedo/instance.h>
+
 namespace albedo
 {
 
-namespace scene
-{
+using GeometryInstance = Instance;
 
 // TODO: use builder pattern to create geometries?
 class Geometry
@@ -18,7 +19,7 @@ class Geometry
       std::vector<glm::vec3>&& _vertices,
       std::vector<glm::vec3>&& _normals,
       std::vector<size_t>&& _indices
-    );
+    ) noexcept;
 
     Geometry(Geometry&&) = delete;
     Geometry& operator=(Geometry&&) = delete;
@@ -26,13 +27,18 @@ class Geometry
     Geometry(Geometry const&) = delete;
     Geometry& operator=(Geometry const&) = delete;
 
+  public:
+
+    GeometryInstance
+    inline getInstance() { return this->m_Instance; }
+
   private:
+    GeometryInstance m_Instance;
+
     std::vector<glm::vec3> _vertices;
     std::vector<glm::vec3> _normals;
     std::vector<size_t> _indices;
 
 };
-
-} // nanespace scene
 
 } // nanespace albedo

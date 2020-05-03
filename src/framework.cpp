@@ -4,7 +4,7 @@
 
 #ifndef WGPU_H
 #define WGPU_H
-#include "wgpu.h"
+#include <albedo/wgpu.h>
 #endif
 
 #include <stdio.h>

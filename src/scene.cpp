@@ -1,17 +1,12 @@
-#include <scene.h>
+#include <albedo/scene.h>
 
 namespace albedo
 {
 
-namespace scene
-{
-
 Scene::Scene()
 {
-
+  
 }
-
-} // nanespace scene
 
 } // nanespace albedo
 
