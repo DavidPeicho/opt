@@ -44,16 +44,30 @@ class Scene
 
   public:
 
-    Instance
-    createInstance(InstanceData = InstanceData{});
+    Scene&
+    addInstance(Instance instance, InstanceData&& = InstanceData{});
 
-    void
-    deleteInstance();
+    Scene&
+    deleteInstance(Instance instance);
+
+  public:
+
+    inline InstanceData&
+    data(Instance instance)
+    {
+      auto pos = m_EntityToIndex.find(instance);
+      if (pos != m_EntityToIndex.end())
+      {
+        return m_data[pos->second].second;
+      }
+      // TODO: find a better way than throwin.
+      throw std::string("invalid instance");
+    }
 
   private:
     std::unordered_map<Instance, Instance::Size, InstanceHash> m_EntityToIndex;
 
-    std::vector<InstanceData> m_data;
+    std::vector<std::pair<Instance, InstanceData>> m_data;
     std::vector<Transform> m_transforms;
 };
 

@@ -1,12 +1,15 @@
 #pragma once
 
+#include <atomic>
+#include <cstddef>
+
 namespace albedo
 {
 
 class Instance {
 
   public:
-    using Size = size_t;
+    using Size = std::size_t;
 
   public:
 

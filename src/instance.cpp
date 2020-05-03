@@ -1,10 +1,8 @@
-#pragma once
-
 #include <albedo/instance.h>
 
 namespace albedo
 {
 
-Instance::globalId = 0;
+std::atomic<Instance::Size> Instance::globalId = 0;
 
 } // namespace albedo

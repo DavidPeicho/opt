@@ -17,7 +17,19 @@ namespace
   void
   processNode(Scene& scene, const tinygltf::Node& node)
   {
+    Instance instance;
 
+    scene.addInstance(instance, InstanceData {
+      .name = std::move(node.name)
+    });
+
+    std::cout << "Processing node " << scene.data(instance).name << std::endl;
+
+    // Traverse graph.
+    for (const auto& child: node.children)
+    {
+      // TODO
+    }
   }
 
 }
