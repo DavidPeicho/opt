@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <vector>
 #include <glm/glm.hpp>
 
 namespace albedo
@@ -15,8 +16,17 @@ struct AABB
   glm::vec3 max;
 };
 
+class BVHNode
+{
+  
+};
+
 class BVH
 {
+
+  private:
+
+    std::vector<BVHNode> m_nodes;
 
 };
 

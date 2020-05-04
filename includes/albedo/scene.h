@@ -52,6 +52,21 @@ class Scene
 
   public:
 
+    inline glm::mat4&
+    transform(Instance instance)
+    {
+      // TODO: refactor this with the `data` method.
+
+      auto pos = m_EntityToIndex.find(instance);
+      if (pos != m_EntityToIndex.end())
+      {
+        return m_transforms[pos->second].modelToLocal;
+      }
+
+      // TODO: find a better way than throwin.
+      throw std::string("invalid instance");
+    }
+
     inline InstanceData&
     data(Instance instance)
     {

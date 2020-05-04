@@ -41,4 +41,14 @@ class Geometry
 
 };
 
+class Mesh
+{
+
+  public:
+
+    Mesh&
+    addGeometry(Geometry&& geom);
+
+};
+
 } // nanespace albedo

@@ -4,6 +4,8 @@
 #include "tiny_gltf.h"
 
 #include <albedoloader/gltf-loader.h>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 namespace albedo
 {
@@ -15,15 +17,35 @@ namespace
 {
 
   void
+  processMesh()
+
+  void
   processNode(Scene& scene, const tinygltf::Node& node)
   {
     Instance instance;
 
     scene.addInstance(instance, InstanceData {
-      .name = std::move(node.name)
+      .name = std::move(node.name) // Name will not be used again, this is safe.
     });
 
     std::cout << "Processing node " << scene.data(instance).name << std::endl;
+
+    // Process transform.
+    if (node.matrix.size() != 0)
+    {
+      scene.transform(instance) = std::move(glm::make_mat4(&node.matrix[0]));
+      std::cout << "Matrix equals to " << glm::to_string(scene.transform(instance)) << std::endl;
+    }
+    else
+    {
+      // TODO: handle pos + rot + scale.
+    }
+
+    if (node.mesh >= 0)
+    {
+      
+    }
+
 
     // Traverse graph.
     for (const auto& child: node.children)
