@@ -1,53 +1,67 @@
 #pragma once
 
-#include <glm/glm.hpp>
+#include <string>
 #include <vector>
 
+#include <glm/glm.hpp>
 #include <albedo/instance.h>
 
 namespace albedo
 {
 
-using GeometryInstance = Instance;
-
-// TODO: use builder pattern to create geometries?
-class Geometry
+struct Vertex
 {
-  public:
-
-    Geometry(
-      std::vector<glm::vec3>&& _vertices,
-      std::vector<glm::vec3>&& _normals,
-      std::vector<size_t>&& _indices
-    ) noexcept;
-
-    Geometry(Geometry&&) = delete;
-    Geometry& operator=(Geometry&&) = delete;
-
-    Geometry(Geometry const&) = delete;
-    Geometry& operator=(Geometry const&) = delete;
-
-  public:
-
-    GeometryInstance
-    inline getInstance() { return this->m_Instance; }
-
-  private:
-    GeometryInstance m_Instance;
-
-    std::vector<glm::vec3> _vertices;
-    std::vector<glm::vec3> _normals;
-    std::vector<size_t> _indices;
-
+  glm::vec3 position;
+  glm::vec3 normal;
+  // TODO: add UV
 };
 
+// TODO: add support for material per VB
 class Mesh
 {
+  public:
+
+    using VertexBuffer = std::vector<Vertex>;
+    using Primitive = std::vector<uint32_t>;
 
   public:
 
+    Mesh() noexcept = default;
+
+    Mesh(Mesh&&) noexcept = default;
+
+    Mesh(VertexBuffer&& vb) noexcept;
+
+    Mesh(Mesh const&) = delete;
+    Mesh& operator=(Mesh const&) = delete;
+
+  public:
+
+    inline const std::string&
+    name() const { return m_name; }
+
+    inline const std::string&
+    name(const std::string& name) { m_name = name; return m_name; }
+
+    inline const std::string&
+    name(std::string&& name) { m_name = std::move(name); return m_name; }
+
     Mesh&
-    addGeometry(Geometry&& geom);
+    addPrimitive(Primitive&& buffer);
+
+    inline VertexBuffer&
+    getVertexBuffer() { return m_vertices; }
+
+    inline const VertexBuffer&
+    getVertexBuffer() const { return m_vertices; }
+
+    inline const std::vector<Primitive>
+    getPrimitives() const { return m_primitives; }
+
+  private:
+    std::string m_name;
+    VertexBuffer m_vertices;
+    std::vector<Primitive> m_primitives;
 
 };
 

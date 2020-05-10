@@ -35,7 +35,8 @@
 
 int main() {
     albedo::Renderer renderer;
-    albedo::loader::glTFLoadScene(renderer, "../box.glb");
+    albedo::loader::GLTFLoader loader;
+    loader.load(renderer, "../box.glb");
     return 0;
 
     if (!glfwInit()) {

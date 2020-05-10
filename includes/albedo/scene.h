@@ -1,29 +1,25 @@
 #pragma once
 
+#include <list>
+#include <memory>
 #include <unordered_map>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include <glm/glm.hpp>
+#include <albedo/components/component-structure.h>
 #include <albedo/instance.h>
+#include <albedo/mesh.h>
 
 namespace albedo
 {
 
 namespace
 {
-
-struct InstanceHash {
-
-  size_t
-  operator()(const Instance& i) const
-  {
-      return i.getId();
-  }
-
-  };
-
-};
+  template <typename T>
+  struct FalseTrait : std::false_type {};
+}
 
 struct Transform
 {
@@ -39,8 +35,19 @@ struct InstanceData
 // TODO: template over `InstanceData` to accept extending that.
 class Scene
 {
+
   public:
-    Scene();
+    using MeshPtr = std::shared_ptr<Mesh>;
+
+  public:
+    Scene() noexcept = default;
+
+    Scene(Scene&&) noexcept = default;
+
+    Scene(const Scene&) = delete;
+
+    Scene&
+    operator=(const Scene&) = delete;
 
   public:
 
@@ -52,38 +59,44 @@ class Scene
 
   public:
 
-    inline glm::mat4&
-    transform(Instance instance)
-    {
-      // TODO: refactor this with the `data` method.
+    Scene&
+    addMesh(Instance instance, Mesh&& mesh);
 
-      auto pos = m_EntityToIndex.find(instance);
-      if (pos != m_EntityToIndex.end())
-      {
-        return m_transforms[pos->second].modelToLocal;
-      }
+    Scene&
+    addMesh(Instance instance, MeshPtr& meshPtr);
 
-      // TODO: find a better way than throwin.
-      throw std::string("invalid instance");
-    }
+    Scene&
+    removeMesh(Instance instance);
 
-    inline InstanceData&
-    data(Instance instance)
-    {
-      auto pos = m_EntityToIndex.find(instance);
-      if (pos != m_EntityToIndex.end())
-      {
-        return m_data[pos->second].second;
-      }
-      // TODO: find a better way than throwin.
-      throw std::string("invalid instance");
-    }
+  public:
+
+    template <typename T>
+    T&
+    data(Instance instance);
 
   private:
-    std::unordered_map<Instance, Instance::Size, InstanceHash> m_EntityToIndex;
-
-    std::vector<std::pair<Instance, InstanceData>> m_data;
-    std::vector<Transform> m_transforms;
+    ComponentArray<InstanceData> m_data;
+    ComponentArray<Transform> m_transforms;
+    ComponentMap<MeshPtr> m_meshes;
 };
 
-} // nanespace albedo
+template <typename T>
+T&
+Scene::data(Instance instance)
+{
+  static_assert(FalseTrait<T>::value, "unsupported type. Check available components");
+}
+
+template <>
+inline InstanceData&
+Scene::data<InstanceData>(Instance instance) { return m_data.data(instance); }
+
+template <>
+inline Transform&
+Scene::data<Transform>(Instance instance) { return m_transforms.data(instance); }
+
+template <>
+inline Scene::MeshPtr&
+Scene::data<Scene::MeshPtr>(Instance instance) { return m_meshes.data(instance); }
+
+} // namespace albedo
