@@ -74,10 +74,13 @@ class Scene
     T&
     data(Instance instance);
 
+    const ComponentArray<MeshPtr>&
+    meshes() const { return m_meshes; }
+
   private:
     ComponentArray<InstanceData> m_data;
     ComponentArray<Transform> m_transforms;
-    ComponentMap<MeshPtr> m_meshes;
+    ComponentArray<MeshPtr> m_meshes;
 };
 
 template <typename T>

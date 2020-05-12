@@ -1,9 +1,0 @@
-namespace albedo
-{
-
-class GPUTexture
-{
-
-};
-
-}

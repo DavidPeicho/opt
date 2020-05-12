@@ -3,24 +3,6 @@ namespace albedo
 
 template <typename T>
 void
-ComponentMap<T>::add(Instance instance, T&& data)
-{
-  m_data[instance] = std::move(data);
-}
-
-template <typename T>
-void
-ComponentMap<T>::remove(Instance instance)
-{
-  const auto i = m_data.find(instance);
-  if (i != m_data.end())
-  {
-    m_data.erase(i);
-  }
-}
-
-template <typename T>
-void
 ComponentArray<T>::add(Instance instance, T&& data)
 {
   auto instanceIt = m_entityToIndex.find(instance);

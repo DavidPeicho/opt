@@ -21,8 +21,9 @@ class Mesh
 {
   public:
 
+    using IndexType = uint32_t;
     using VertexBuffer = std::vector<Vertex>;
-    using Primitive = std::vector<uint32_t>;
+    using Primitive = std::vector<IndexTypex>;
 
   public:
 
@@ -58,11 +59,15 @@ class Mesh
     inline const std::vector<Primitive>
     getPrimitives() const { return m_primitives; }
 
+    inline IndexType
+    getTrianglesCount() const { return m_nbTriangles; }
+
   private:
     std::string m_name;
     VertexBuffer m_vertices;
     std::vector<Primitive> m_primitives;
 
+    IndexType m_nbTriangles;
 };
 
 } // nanespace albedo

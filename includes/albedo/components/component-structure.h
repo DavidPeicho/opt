@@ -19,34 +19,6 @@ namespace albedo
   };
 
   template <typename T>
-  class ComponentMap
-  {
-    public:
-
-      void
-      add(Instance instance, T&& data);
-
-      void
-      remove(Instance instance);
-
-      inline T&
-      data(Instance instance)
-      {
-        auto pos = m_data.find(instance);
-        if (pos != m_data.end())
-        {
-          return pos->second;
-        }
-        // TODO: find a better way than throwin.
-        throw std::string("invalid instance");
-      }
-
-    private:
-      std::unordered_map<Instance, T, InstanceHash> m_data;
-
-  };
-
-  template <typename T>
   class ComponentArray
   {
     public:
@@ -68,6 +40,9 @@ namespace albedo
         // TODO: find a better way than throwin.
         throw std::string("invalid instance");
       }
+
+      inline const std::vector<T>&
+      all() const { m_data; }
 
     private:
 
