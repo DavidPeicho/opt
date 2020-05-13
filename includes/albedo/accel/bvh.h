@@ -13,8 +13,7 @@ namespace accel
 
 class BVHNode
 {
-  math::AABB aabb;
-  bool isLeaf;
+
 };
 
 class BVH
