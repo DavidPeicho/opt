@@ -3,6 +3,7 @@
 #include <limits>
 
 #include <glm/glm.hpp>
+#include <glm/gtx/norm.hpp>
 
 #include <albedo/wgpu.h>
 #include <albedo/scene.h>
@@ -15,6 +16,19 @@ namespace math
 
 struct Box3
 {
+
+  Box3()
+    : min{std::numeric_limits<float>::infinity()}
+    , max{- std::numeric_limits<float>::infinity()}
+  { }
+
+  inline Box3&
+  makeEmpty()
+  {
+    min = glm::vec3(std::numeric_limits<float>::infinity());
+    max = glm::vec3(- std::numeric_limits<float>::infinity());
+    return *this;
+  }
 
   inline Box3&
   expand(glm::vec3 point)
@@ -36,6 +50,29 @@ struct Box3
   center()
   {
     return (min + max) * 0.5f;
+  }
+
+  inline glm::vec3
+  diagonal() { return max - min; }
+
+  inline float
+  getSurfaceArea()
+  {
+    const auto d = diagonal();
+    return 2.0 * glm::length2(d);
+  }
+
+  inline uint8_t
+  maximumExtent()
+  {
+    if (max.x > max.y && max.x > max.z) { return 0; }
+    return max.y > max.z ? 1 : 2;
+  }
+
+  inline bool
+  isEmpty()
+  {
+    return max.x <= min.x || max.y <= min.y || max.z <= min.z;
   }
 
   glm::vec3 min;

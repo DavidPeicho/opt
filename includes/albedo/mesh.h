@@ -16,19 +16,14 @@ struct Vertex
   // TODO: add UV
 };
 
-struct Geometry
-{
-  using IndexType = uint32_t;
-
-  std::vector<IndexType> indices;
-};
-
 // TODO: add support for material per VB
 class Mesh
 {
   public:
 
+    using IndexType = uint32_t;
     using VertexBuffer = std::vector<Vertex>;
+    using IndexBuffer = std::vector<IndexType>;
 
   public:
 
@@ -53,7 +48,7 @@ class Mesh
     name(std::string&& name) { m_name = std::move(name); return m_name; }
 
     Mesh&
-    addGeometry(Geometry&& geometry);
+    setIndices(IndexBuffer&& buffer);
 
     inline VertexBuffer&
     getVertexBuffer() { return m_vertices; }
@@ -61,18 +56,17 @@ class Mesh
     inline const VertexBuffer&
     getVertexBuffer() const { return m_vertices; }
 
-    inline const std::vector<Geometry>&
-    getGeometries() const { return m_geometries; }
+    inline const IndexBuffer&
+    getIndices() const { return m_indices; }
 
-    inline Geometry::IndexType
-    getTrianglesCount() const { return m_nbTriangles; }
+    inline IndexType
+    getTrianglesCount() const { return m_indices.size() / 3; }
 
   private:
     std::string m_name;
-    VertexBuffer m_vertices;
-    std::vector<Geometry> m_geometries;
 
-    Geometry::IndexType m_nbTriangles;
+    VertexBuffer m_vertices;
+    IndexBuffer m_indices;
 };
 
 } // nanespace albedo
