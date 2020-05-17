@@ -31,12 +31,23 @@
 #include <GLFW/glfw3native.h>
 
 #include <albedoloader/gltf-loader.h>
+#include <albedo/accel/gpu-accel.h>
 #include <albedo/scene.h>
 
 int main() {
     albedo::Renderer renderer;
     albedo::loader::GLTFLoader loader;
-    loader.load(renderer, "../box.glb");
+    auto scene = loader.load(renderer, "../box.glb");
+    if (!scene)
+    {
+      std::cerr << "Failed to load scene" << std::endl;
+      return 1;
+    }
+
+    albedo::accel::GPUAccelerationStructure accelerationStructure;
+    accelerationStructure.addMeshes(loader.meshes());
+    accelerationStructure.build(scene.value());
+
     return 0;
 
     if (!glfwInit()) {

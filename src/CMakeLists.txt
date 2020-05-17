@@ -6,4 +6,5 @@ target_sources(webtracer PRIVATE
   mesh.cpp
 )
 
+add_subdirectory(acceleration)
 add_subdirectory(plugins)

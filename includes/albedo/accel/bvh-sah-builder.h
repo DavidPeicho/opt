@@ -1,3 +1,5 @@
+#include <array>
+
 #include <albedo/accel/bvh.h>
 #include <albedo/mesh.h>
 
@@ -12,6 +14,12 @@ namespace
 
 struct BVHConstructionNode
 {
+
+  bool
+  isLeaf() { return primitiveIndex != InternalNodeMask; }
+
+  static constexpr Mesh::IndexType InternalNodeMask = 0xFFFFFFFF;
+
   math::Box3 aabb;
   glm::vec3 center;
 

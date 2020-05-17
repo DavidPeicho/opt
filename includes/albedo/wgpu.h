@@ -11,6 +11,8 @@
  *   2. Run `rustup run nightly cbindgen toolkit/library/rust/ --lockfile Cargo.lock --crate wgpu-remote -o dom/webgpu/ffi/wgpu_ffi_generated.h`
  */
 
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif

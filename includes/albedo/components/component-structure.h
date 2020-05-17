@@ -42,7 +42,7 @@ namespace albedo
       }
 
       inline const std::vector<T>&
-      all() const { m_data; }
+      all() const { return m_data; }
 
     private:
 

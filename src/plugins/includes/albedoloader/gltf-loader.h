@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <glm/glm.hpp>
+#include <albedo/mesh.h>
 #include <albedo/scene.h>
 #include <albedo/renderer.h>
 
@@ -23,17 +24,22 @@ class GLTFLoader
     std::optional<Scene>
     load(Renderer& renderer, const std::string& path);
 
+  public:
+
+    inline std::vector<Mesh::MeshPtr>&
+    meshes() { return m_meshes; }
+
   private:
 
     void
     processMeshes(Scene& scene, const tinygltf::Model& model);
 
     void
-    processNode(Scene& scene, const tinygltf::Node& node);
+    processNode(Scene& scene, const tinygltf::Node& node, const tinygltf::Model& model);
 
   private:
 
-    std::vector<Scene::MeshPtr> m_meshes;
+    std::vector<Mesh::MeshPtr> m_meshes;
 
 };
 

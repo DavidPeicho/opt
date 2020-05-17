@@ -21,6 +21,8 @@ class Mesh
 {
   public:
 
+    using MeshPtr = std::shared_ptr<Mesh>;
+
     using IndexType = uint32_t;
     using VertexBuffer = std::vector<Vertex>;
     using IndexBuffer = std::vector<IndexType>;

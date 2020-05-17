@@ -28,7 +28,7 @@ Scene::addMesh(Instance instance, Mesh&& mesh)
 }
 
 Scene&
-Scene::addMesh(Instance instance, MeshPtr& meshPtr)
+Scene::addMesh(Instance instance, Mesh::MeshPtr& meshPtr)
 {
   auto ptr = meshPtr;
   m_meshes.add(instance, std::move(ptr));

@@ -5,7 +5,6 @@
 
 #include <type_traits>
 
-#include <albedo/mesh.h>
 #include <albedoloader/gltf-loader.h>
 
 #include <glm/gtc/type_ptr.hpp>
@@ -41,6 +40,24 @@ namespace
     return std::make_tuple(data, stride / sizeof (T));
   }
 
+  template<typename T>
+  void
+  copyAccessorData(
+    std::vector<Mesh::IndexType>& indices,
+    const size_t indexOffset,
+    const tinygltf::Accessor& accessor,
+    const tinygltf::Model& model
+  )
+  {
+    auto [ indicesBuffer, indicesStride ] = getAccessorDataPointerAndStride<T>(
+      model, accessor
+    );
+    for (size_t i = 0; i < accessor.count; ++i)
+    {
+      indices.push_back(indicesBuffer[indicesStride * i] + indexOffset);
+    }
+  }
+
 }
 
 std::optional<Scene>
@@ -61,8 +78,6 @@ GLTFLoader::load(Renderer& renderer, const std::string& path)
 
   Scene result;
 
-  Scene b(std::move(result));
-
   std::cout << "NB SCENES " << model.scenes.size() << std::endl;
 
   processMeshes(result, model);
@@ -70,7 +85,7 @@ GLTFLoader::load(Renderer& renderer, const std::string& path)
   if (model.scenes.size() == 0) {
     std::cout << model.nodes.size() << std::endl;
     for (const auto& node: model.nodes) {
-      processNode(result, node);
+      processNode(result, node, model);
     }
     return std::make_optional(std::move(result));
   }
@@ -78,7 +93,7 @@ GLTFLoader::load(Renderer& renderer, const std::string& path)
   for (const auto& glTFScene: model.scenes) {
     for (const auto nodeIndex: glTFScene.nodes) {
       const auto& node = model.nodes[nodeIndex];
-      processNode(result, node);
+      processNode(result, node, model);
     }
   }
 
@@ -102,14 +117,8 @@ GLTFLoader::processMeshes(Scene& scene, const tinygltf::Model& model)
       const auto& positionAccessor = model.accessors[
         primitive.attributes.at("POSITION")
       ];
-      // TODO: handle the case where no indices are provided.
-      const auto& indexAccessor = model.accessors[primitive.indices];
-
       auto [ positionsBuffer, positionStride ] = getAccessorDataPointerAndStride<glm::vec3>(
         model, positionAccessor
-      );
-      auto [ indicesBuffer, indicesStride ] = getAccessorDataPointerAndStride<uint32_t>(
-        model, indexAccessor
       );
 
       uint32_t startIndex = mesh.getVertexBuffer().size();
@@ -123,19 +132,31 @@ GLTFLoader::processMeshes(Scene& scene, const tinygltf::Model& model)
         mesh.getVertexBuffer().emplace_back(std::move(v));
       }
 
-      for (size_t i = 0; i < indexAccessor.count; ++i)
+      const auto& indexAccessor = model.accessors[primitive.indices];
+      switch (indexAccessor.componentType)
       {
-        indices.push_back(indicesBuffer[indicesStride * i] + startIndex);
+				case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE:
+          copyAccessorData<uint8_t>(indices, startIndex, indexAccessor, model);
+          break;
+				case TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT:
+          copyAccessorData<uint16_t>(indices, startIndex, indexAccessor, model);
+					break;
+        case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT:
+          copyAccessorData<uint32_t>(indices, startIndex, indexAccessor, model);
+					break;
       }
-
-      mesh.addPrimitive(std::move(indices));
+      mesh.setIndices(std::move(indices));
     }
     m_meshes.emplace_back(std::make_shared<Mesh>(std::move(mesh)));
   }
 }
 
 void
-GLTFLoader::processNode(Scene& scene, const tinygltf::Node& node)
+GLTFLoader::processNode(
+  Scene& scene,
+  const tinygltf::Node& node,
+  const tinygltf::Model& model
+)
 {
   Instance instance;
 
@@ -163,7 +184,7 @@ GLTFLoader::processNode(Scene& scene, const tinygltf::Node& node)
   // Traverse graph.
   for (const auto& child: node.children)
   {
-    // TODO
+    processNode(scene, model.nodes[child], model);
   }
 }
 

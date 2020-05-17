@@ -37,9 +37,6 @@ class Scene
 {
 
   public:
-    using MeshPtr = std::shared_ptr<Mesh>;
-
-  public:
     Scene() noexcept = default;
 
     Scene(Scene&&) noexcept = default;
@@ -63,7 +60,7 @@ class Scene
     addMesh(Instance instance, Mesh&& mesh);
 
     Scene&
-    addMesh(Instance instance, MeshPtr& meshPtr);
+    addMesh(Instance instance, Mesh::MeshPtr& meshPtr);
 
     Scene&
     removeMesh(Instance instance);
@@ -74,13 +71,13 @@ class Scene
     T&
     data(Instance instance);
 
-    const ComponentArray<MeshPtr>&
+    const ComponentArray<Mesh::MeshPtr>&
     meshes() const { return m_meshes; }
 
   private:
     ComponentArray<InstanceData> m_data;
     ComponentArray<Transform> m_transforms;
-    ComponentArray<MeshPtr> m_meshes;
+    ComponentArray<Mesh::MeshPtr> m_meshes;
 };
 
 template <typename T>
@@ -99,7 +96,7 @@ inline Transform&
 Scene::data<Transform>(Instance instance) { return m_transforms.data(instance); }
 
 template <>
-inline Scene::MeshPtr&
-Scene::data<Scene::MeshPtr>(Instance instance) { return m_meshes.data(instance); }
+inline Mesh::MeshPtr&
+Scene::data<Mesh::MeshPtr>(Instance instance) { return m_meshes.data(instance); }
 
 } // namespace albedo

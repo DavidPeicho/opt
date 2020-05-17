@@ -16,16 +16,13 @@ class BVHNode
 
 };
 
-struct GPUBVHNode
-{
-  glm::vec3 min;
-  uint32_t primitiveIndex;
-  glm::vec4 max;
-  uint32_t nextNodeIndex;
-};
-
 class BVH
 {
+
+  public:
+
+    inline size_t
+    getNodesCount() { return m_nodes.size(); }
 
   private:
 

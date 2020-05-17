@@ -18,15 +18,15 @@ struct Box3
 {
 
   Box3()
-    : min{std::numeric_limits<float>::infinity()}
-    , max{- std::numeric_limits<float>::infinity()}
+    : min{std::numeric_limits<float>::max()}
+    , max{- std::numeric_limits<float>::min()}
   { }
 
   inline Box3&
   makeEmpty()
   {
-    min = glm::vec3(std::numeric_limits<float>::infinity());
-    max = glm::vec3(- std::numeric_limits<float>::infinity());
+    min = glm::vec3(std::numeric_limits<float>::max());
+    max = glm::vec3(- std::numeric_limits<float>::min());
     return *this;
   }
 
