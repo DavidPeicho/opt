@@ -11,23 +11,27 @@ namespace albedo
 namespace accel
 {
 
-class BVHNode
+struct BVHNode
 {
+  static constexpr Mesh::IndexType InternalNodeMask = 0xFFFFFFFF;
+  static constexpr Mesh::IndexType InvalidValue = 0xFFFFFFFF;
 
+  inline bool
+  isLeaf() const { return primitiveIndex != InternalNodeMask; }
+
+  // TODO: custom data for build should go in the builder.
+  math::Box3 aabb;
+  glm::vec3 center;
+
+  Mesh::IndexType primitiveIndex = 0;
+  Mesh::IndexType leftChild = 0;
+  Mesh::IndexType rightChild = 0;
 };
 
-class BVH
+struct BVH
 {
-
-  public:
-
-    inline size_t
-    getNodesCount() { return m_nodes.size(); }
-
-  private:
-
-    std::vector<BVHNode> m_nodes;
-
+  Mesh::IndexType rootIndex;
+  std::vector<BVHNode> nodes;
 };
 
 }

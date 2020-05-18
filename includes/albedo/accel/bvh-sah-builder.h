@@ -12,22 +12,6 @@ namespace accel
 namespace
 {
 
-struct BVHConstructionNode
-{
-
-  bool
-  isLeaf() { return primitiveIndex != InternalNodeMask; }
-
-  static constexpr Mesh::IndexType InternalNodeMask = 0xFFFFFFFF;
-
-  math::Box3 aabb;
-  glm::vec3 center;
-
-  Mesh::IndexType primitiveIndex = 0;
-  Mesh::IndexType leftChild = 0;
-  Mesh::IndexType rightChild = 0;
-};
-
 struct Bin
 {
   math::Box3 aabb;

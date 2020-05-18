@@ -86,7 +86,7 @@ findBestSplit(
 template <Mesh::IndexType BinCount>
 Mesh::IndexType
 recursiveBuild(
-  std::vector<BVHConstructionNode>& nodes,
+  std::vector<BVHNode>& nodes,
   std::array<Bin, BinCount>& bins,
   Mesh::IndexType start,
   Mesh::IndexType end
@@ -104,10 +104,10 @@ recursiveBuild(
   }
 
   Mesh::IndexType nodeIndex = nodes.size();
-  nodes.emplace_back(BVHConstructionNode{});
+  nodes.emplace_back(BVHNode{});
 
   auto& node = nodes[nodeIndex];
-  node.primitiveIndex = BVHConstructionNode::InternalNodeMask;
+  node.primitiveIndex = BVHNode::InternalNodeMask;
   node.aabb = box;
   node.center = box.center();
 
@@ -143,7 +143,7 @@ recursiveBuild(
   auto iterator = std::partition(
     nodes.begin() + start,
     nodes.begin() + end - 1,
-    [&](const BVHConstructionNode& node) {
+    [&](const BVHNode& node) {
       const auto centerOnAxis = node.center[axis];
       const auto i = getBinIndex<BinCount>(centerOnAxis, centroidsBox.min[axis], spanOnAxis);
       return i <= splitIndex;
@@ -188,7 +188,7 @@ SAHBuilder<BinCount>::build(const Mesh& mesh)
   const auto& indices = mesh.getIndices();
 
   size_t nbNodes = 2 * nbTriangles - 1;
-  std::vector<BVHConstructionNode> nodes;
+  std::vector<BVHNode> nodes;
   nodes.reserve(nbNodes);
 
   // TODO: create an iterator for the triangles.
@@ -197,27 +197,30 @@ SAHBuilder<BinCount>::build(const Mesh& mesh)
     const auto& v0 = vertices[indices[i]].position;
     const auto& v1 = vertices[indices[i + 1]].position;
     const auto& v2 = vertices[indices[i + 2]].position;
-    BVHConstructionNode node;
-    node.primitiveIndex = i / 3;
+    BVHNode node;
+    node.primitiveIndex = i; // TODO: replace name by indexStart
     node.aabb.expand(v0).expand(v1).expand(v2);
     node.center = node.aabb.center();
-    node.leftChild = BVHConstructionNode::InternalNodeMask;
-    node.rightChild = BVHConstructionNode::InternalNodeMask;
+    node.leftChild = BVHNode::InternalNodeMask;
+    node.rightChild = BVHNode::InternalNodeMask;
     nodes.emplace_back(std::move(node));
   }
 
   auto rootIndex = recursiveBuild<BinCount>(nodes, m_bins, 0, nodes.size());
 
-  /* for (size_t i = 0; i < nodes.size(); ++i)
+  std::cout << "Root = " << rootIndex << std::endl;
+  for (size_t i = 0; i < nodes.size(); ++i)
   {
     const auto& n = nodes[i];
     std::cout << "Node = " << i << std::endl;
     std::cout << " Primitive Index = " << n.primitiveIndex << std::endl;
     std::cout << " Left -> " << n.leftChild << std::endl;
     std::cout << " Right -> " << n.rightChild << std::endl;
-  } */
+  }
 
   BVH bvh;
+  bvh.nodes = std::move(nodes);
+  bvh.rootIndex = rootIndex;
   return bvh;
 }
 
