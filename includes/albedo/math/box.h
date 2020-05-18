@@ -1,9 +1,12 @@
 #pragma once
 
+// TODO: add a separate class for printing.
+#include <iostream>
 #include <limits>
 
 #include <glm/glm.hpp>
 #include <glm/gtx/norm.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 #include <albedo/wgpu.h>
 #include <albedo/scene.h>
@@ -73,6 +76,12 @@ struct Box3
   isEmpty()
   {
     return max.x <= min.x || max.y <= min.y || max.z <= min.z;
+  }
+
+  inline std::string
+  toString()
+  {
+    return "min(" + glm::to_string(min) + "), max(" + glm::to_string(max) + ")";
   }
 
   glm::vec3 min;

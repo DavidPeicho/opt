@@ -28,7 +28,7 @@ GPUAccelerationStructure::build(const Scene& scene)
   size_t totalNumberNodes = 0;
   for (const auto& m: m_meshes)
   {
-    accel::SAHBuilder builder;
+    accel::SAHBuilder<2> builder;
     auto bvh = builder.build(*m);
     totalNumberNodes += bvh.getNodesCount();
     bvhs.emplace_back(std::move(bvh));

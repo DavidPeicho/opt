@@ -17,13 +17,12 @@ getBinIndex(
   float spanOnAxis
 )
 {
-  // TODO: what should we do when the span is 0...?
-  if (spanOnAxis <= 0.000000001) { return BinCount / 2; }
   float normalized = (centerOnAxis - centroidBoxMinOnAxis) / spanOnAxis;
-  return std::min(
+  auto index = std::min(
     BinCount * static_cast<Mesh::IndexType>(normalized),
     BinCount - 1
   );
+  return index;
 }
 
 template <Mesh::IndexType BinCount>
@@ -48,7 +47,8 @@ findBestSplit(
     auto& bin = bins[i];
     nbTriangles += bin.nbPrimitives;
     aabb.expand(bin.aabb);
-    bin.rightCost = nbTriangles * aabb.getSurfaceArea();
+    bin.rightCost = (float)nbTriangles * aabb.getSurfaceArea();
+    // std::cout << "bin " << i << " " << aabb.toString() << std::endl;
   }
 
   //
@@ -72,7 +72,7 @@ findBestSplit(
     // SAH theory states that the cost is relative to the probability of
     // intersecting the sub area. However, we are simply comparing the cost,
     // so the division can be skipped.
-    auto cost = (nbTriangles * aabb.getSurfaceArea()) + bin.rightCost;
+    auto cost = ((float)nbTriangles * aabb.getSurfaceArea()) + bin.rightCost;
     if (cost < minCost)
     {
       minCost = cost;
@@ -103,10 +103,15 @@ recursiveBuild(
     centroidsBox.expand(node.center);
   }
 
+  Mesh::IndexType nodeIndex = nodes.size();
+  nodes.emplace_back(BVHConstructionNode{});
+
+  auto& node = nodes[nodeIndex];
+  node.primitiveIndex = BVHConstructionNode::InternalNodeMask;
+  node.aabb = box;
+  node.center = box.center();
+
   const auto axis = box.maximumExtent();
-
-  // std::cout << centroidsBox.max[axis] << " " << centroidsBox.min[axis] << std::endl;
-
   const auto spanOnAxis = centroidsBox.max[axis] - centroidsBox.min[axis];
 
   //
@@ -135,7 +140,7 @@ recursiveBuild(
   }
 
   auto splitIndex = findBestSplit<BinCount>(bins, start, end);
-  const BVHConstructionNode* middleNode = std::partition(
+  auto iterator = std::partition(
     nodes.begin() + start,
     nodes.begin() + end - 1,
     [&](const BVHConstructionNode& node) {
@@ -144,15 +149,14 @@ recursiveBuild(
       return i <= splitIndex;
   });
 
-  Mesh::IndexType mid = middleNode - &nodes[0];
-
-  Mesh::IndexType nodeIndex = nodes.size();
-  nodes.emplace_back(BVHConstructionNode{});
-
-  auto& node = nodes[nodeIndex];
-  node.primitiveIndex = BVHConstructionNode::InternalNodeMask;
-  node.aabb = box;
-  node.center = box.center();
+  Mesh::IndexType mid = iterator - nodes.begin();
+  if (mid == start)
+  {
+    mid = (start + end) * 0.5;
+    node.leftChild = recursiveBuild<BinCount>(nodes, bins, start, mid);
+    node.rightChild = recursiveBuild<BinCount>(nodes, bins, mid, end);
+    return nodeIndex;
+  }
 
   auto leftChild = recursiveBuild<BinCount>(nodes, bins, start, mid);
   auto rightChild = recursiveBuild<BinCount>(nodes, bins, mid, end);
@@ -176,6 +180,7 @@ SAHBuilder<BinCount>::build(const Mesh& mesh)
   for (auto& bin: m_bins)
   {
     bin.nbPrimitives = 0;
+    bin.aabb.makeEmpty();
     bin.rightCost = 0.0;
   }
 
@@ -196,19 +201,21 @@ SAHBuilder<BinCount>::build(const Mesh& mesh)
     node.primitiveIndex = i / 3;
     node.aabb.expand(v0).expand(v1).expand(v2);
     node.center = node.aabb.center();
+    node.leftChild = BVHConstructionNode::InternalNodeMask;
+    node.rightChild = BVHConstructionNode::InternalNodeMask;
     nodes.emplace_back(std::move(node));
   }
 
   auto rootIndex = recursiveBuild<BinCount>(nodes, m_bins, 0, nodes.size());
 
-  std::cout << "Root = " << rootIndex << std::endl;
-
-   for (size_t i = 0; i < nodes.size(); ++i) {
+  /* for (size_t i = 0; i < nodes.size(); ++i)
+  {
     const auto& n = nodes[i];
-    std::cout << "Node " << i << " | Primitive = " << n.primitiveIndex << std::endl;
-    std::cout << "  Left  -> " << n.leftChild << std::endl;
-    std::cout << "  Right  -> " << n.rightChild << std::endl;
-  }
+    std::cout << "Node = " << i << std::endl;
+    std::cout << " Primitive Index = " << n.primitiveIndex << std::endl;
+    std::cout << " Left -> " << n.leftChild << std::endl;
+    std::cout << " Right -> " << n.rightChild << std::endl;
+  } */
 
   BVH bvh;
   return bvh;
