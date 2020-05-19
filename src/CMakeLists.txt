@@ -4,6 +4,7 @@ target_sources(webtracer PRIVATE
   instance.cpp
   scene.cpp
   mesh.cpp
+  resource-manager.cpp
 )
 
 add_subdirectory(acceleration)

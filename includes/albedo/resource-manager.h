@@ -1,17 +1,11 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 
-#include <glm/glm.hpp>
-#include <albedo/wgpu.h>
-#include <albedo/accel/bvh.h>
 #include <albedo/mesh.h>
-#include <albedo/scene.h>
 
 namespace albedo
-{
-
-namespace accel
 {
 
 struct VertexGPU
@@ -34,16 +28,14 @@ struct BVHNodeGPU
   uint32_t padding_1;
 };
 
-class GPUAccelerationStructure
+class ResourceManager
 {
+  friend class Scene;
 
   public:
 
     using NodesBuffer = std::vector<BVHNodeGPU>;
-
-  public:
-
-    // GPUAccelerationStructure(WGPUDeviceId deviceId);
+    using Ptr = std::shared_ptr<ResourceManager>;
 
   public:
 
@@ -53,21 +45,16 @@ class GPUAccelerationStructure
     // TODO: user should provide the BVH himself, so that he can choose
     // what object are static or not.
     void
-    build(const Scene& scene);
-
-    void
-    updateInstances();
+    build();
 
   private:
-    WGPUDeviceId m_deviceID;
 
     std::vector<Mesh::MeshPtr> m_meshes;
+
     std::vector<Vertex> m_vertices; // Vertices of **all** BVH.
     std::vector<Mesh::IndexBuffer> m_indices; // Indices of **all** BVH.
     NodesBuffer m_nodes; // Nodes of all BVH.
 
 };
 
-} // namespace accel
-
-} // namespace albedo
+}

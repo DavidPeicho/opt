@@ -1,4 +1,4 @@
-#include <albedo/accel/gpu-accel.h>
+#include <albedo/resource-manager.h>
 #include <albedo/accel/bvh-sah-builder.h>
 
 namespace albedo
@@ -42,7 +42,7 @@ flattenBVH(
   }
   if (node.rightChild != BVHNode::InvalidValue)
   {
-    flattenBVH(nodes, inputs, node.rightChild, nextIndex,indexOffset, nodeOffset);
+    flattenBVH(nodes, inputs, node.rightChild, nextIndex, indexOffset, nodeOffset);
   }
 
   *output = std::move(result);
@@ -52,14 +52,14 @@ flattenBVH(
 }
 
 void
-GPUAccelerationStructure::addMeshes(const std::vector<Mesh::MeshPtr>& meshes)
+ResourceManager::addMeshes(const std::vector<Mesh::MeshPtr>& meshes)
 {
   // TODO: replace by a mesh to BVH tracking.
   for (const auto& m: meshes) { m_meshes.emplace_back(m); }
 }
 
 void
-GPUAccelerationStructure::build(const Scene& scene)
+ResourceManager::build()
 {
   // TODO: should we store a ptr to the BVH inside each scene?
   // So scene can share BVH, and BVH contains the mesh.
@@ -94,6 +94,7 @@ GPUAccelerationStructure::build(const Scene& scene)
 
   Mesh::IndexType startIndices = 0;
   size_t startVertices = 0;
+  // TODO: parralele for.
   for (size_t i = 0; i < bvhs.size(); ++i)
   {
     const auto& mesh = *m_meshes[i];

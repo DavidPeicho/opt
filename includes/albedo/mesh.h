@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <glm/glm.hpp>
+#include <albedo/accel/bvh.h>
 #include <albedo/instance.h>
 
 namespace albedo
@@ -64,11 +65,14 @@ class Mesh
     inline IndexType
     getTrianglesCount() const { return m_indices.size() / 3; }
 
+    inline const BVH&
+    getBVH() const { return m_BVH; }
+
   private:
     std::string m_name;
-
     VertexBuffer m_vertices;
     IndexBuffer m_indices;
+    BVH m_bvh;
 };
 
 } // nanespace albedo

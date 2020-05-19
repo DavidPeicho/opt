@@ -10,7 +10,9 @@
 #include <glm/glm.hpp>
 #include <albedo/components/component-structure.h>
 #include <albedo/instance.h>
+#include <albedo/material.h>
 #include <albedo/mesh.h>
+#include <albedo/resource-manager.h>
 
 namespace albedo
 {
@@ -32,12 +34,21 @@ struct InstanceData
   std::string name;
 };
 
+struct Renderable
+{
+  glm::mat4 modelToWorld;
+  uint32_t bvhRootIndex;
+  uint32_t materialIndex;
+};
+
 // TODO: template over `InstanceData` to accept extending that.
+// TODO: add method to synchronize resources. What happens if the layout
+// of the ResourceManager changes, we need to sync everything.
 class Scene
 {
 
   public:
-    Scene() noexcept = default;
+    Scene(const ResourceManager::Ptr& manager);
 
     Scene(Scene&&) noexcept = default;
 
@@ -56,14 +67,14 @@ class Scene
 
   public:
 
+    // TODO: expose a renderable manager directly.
+    // TODO: improve API by letting user set the instanc with the mesh?
     Scene&
-    addMesh(Instance instance, Mesh&& mesh);
+    addRenderable(Instance instance, size_t meshIndex);
 
+    // TODO: expose a renderable manager directly.
     Scene&
-    addMesh(Instance instance, Mesh::MeshPtr& meshPtr);
-
-    Scene&
-    removeMesh(Instance instance);
+    deleteRenderable(Instance instance);
 
   public:
 
@@ -71,13 +82,13 @@ class Scene
     T&
     data(Instance instance);
 
-    const ComponentArray<Mesh::MeshPtr>&
-    meshes() const { return m_meshes; }
-
   private:
     ComponentArray<InstanceData> m_data;
     ComponentArray<Transform> m_transforms;
-    ComponentArray<Mesh::MeshPtr> m_meshes;
+    ComponentArray<Renderable> m_renderables;
+    ComponentArray<Material> m_materials;
+
+    ResourceManager::Ptr m_resourceManager;
 };
 
 template <typename T>
