@@ -6,6 +6,7 @@ namespace albedo
 namespace backend
 {
 
+// TODO: move to sources and use PIMPL.
 class RenderPipeline
 {
   public:

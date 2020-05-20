@@ -1,7 +1,3 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-
 #include <stdio.h>
 #include <iostream>
 #include <stdlib.h>
@@ -19,52 +15,97 @@
 #endif
 
 #include <GLFW/glfw3.h>
+
 #if WGPU_TARGET == WGPU_TARGET_MACOS
-#define GLFW_EXPOSE_NATIVE_COCOA
+  #define GLFW_EXPOSE_NATIVE_COCOA
 #elif WGPU_TARGET == WGPU_TARGET_LINUX_X11
-#define GLFW_EXPOSE_NATIVE_X11
+  #define GLFW_EXPOSE_NATIVE_X11
 #elif WGPU_TARGET == WGPU_TARGET_LINUX_WAYLAND
-#define GLFW_EXPOSE_NATIVE_WAYLAND
+  #define GLFW_EXPOSE_NATIVE_WAYLAND
 #elif WGPU_TARGET == WGPU_TARGET_WINDOWS
-#define GLFW_EXPOSE_NATIVE_WIN32
+  #define GLFW_EXPOSE_NATIVE_WIN32
 #endif
 #include <GLFW/glfw3native.h>
 
 #include <albedoloader/gltf-loader.h>
-#include <albedo/accel/gpu-accel.h>
 #include <albedo/scene.h>
 
+GLFWwindow* window = nullptr;
+
+void
+initialize(WGPUAdapterId adapterId, void*)
+{
+  WGPUDeviceDescriptor deviceDescriptor{
+    .extensions = { .anisotropic_filtering = false },
+    .limits = { .max_bind_groups = 1 }
+  };
+
+  WGPUDeviceId deviceId = wgpu_adapter_request_device(adapter, &deviceDescriptor);
+
+  albedo::Renderer renderer(deviceId);
+
+  albedo::loader::GLTFLoader loader;
+  auto scene = loader.load(renderer, "../box.glb");
+
+  if (!scene)
+  {
+    std::cerr << "Failed to load scene" << std::endl;
+    return 1;
+  }
+
+  albedo::accel::GPUAccelerationStructure accelerationStructure;
+  accelerationStructure.addMeshes(loader.meshes());
+  accelerationStructure.build(scene.value());
+
+  render();
+}
+
+void render(albedo::Renderer& renderer)
+{
+  int width = 0;
+  int height = 0;
+  while (!glfwWindowShouldClose(window))
+  {
+    glfwGetWindowSize(window, &width, &height);
+    // Resize if needed.
+    renderer.setSize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+  }
+}
+
 int main() {
-    albedo::Renderer renderer;
-    albedo::loader::GLTFLoader loader;
-    auto scene = loader.load(renderer, "../box.glb");
-    if (!scene)
-    {
-      std::cerr << "Failed to load scene" << std::endl;
+  if (!glfwInit()) {
+      printf("Cannot initialize glfw");
       return 1;
-    }
+  }
 
-    albedo::accel::GPUAccelerationStructure accelerationStructure;
-    accelerationStructure.addMeshes(loader.meshes());
-    accelerationStructure.build(scene.value());
+  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+  window = glfwCreateWindow(640, 480, "wgpu with glfw", NULL, NULL);
 
-    return 0;
+  if (!window)
+  {
+    printf("Failed to create window!");
+    return 1;
+  }
 
-    if (!glfwInit()) {
-        printf("Cannot initialize glfw");
-        return 1;
-    }
+  id metalLayer = [CAMetalLayer layer];
+  NSWindow* nsWindow = glfwGetCocoaWindow(window);
+  [nsWindow.contentView setWantsLayer : YES] ;
+  [nsWindow.contentView setLayer : metalLayer] ;
+  WGPUSurfaceId surface; = wgpu_create_surface_from_metal_layer(metalLayer);
 
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow(640, 480, "wgpu with glfw", NULL, NULL);
+  WGPUAdapterId adapterId = 0;
+  WGPURequestAdapterOptions adapterOptions {
+    .power_preference = WGPUPowerPreference_LowPower,
+    .compatible_surface = surface
+  };
 
-    if (!window) {
-        printf("Cannot create window");
-        return 1;
-    }
+  wgpu_request_adapter_async(&adapterOptions, 2 | 4 | 8,
+      request_adapter_callback,
+      initialize
+  );
 
-    glfwDestroyWindow(window);
-    glfwTerminate();
+  glfwDestroyWindow(window);
+  glfwTerminate();
 
-    return 0;
+  return 0;
 }

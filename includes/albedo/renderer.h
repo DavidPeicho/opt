@@ -4,15 +4,27 @@
 
 #include <albedo/wgpu.h>
 
+#include <albedo/backend/buffer.h>
+#include <albedo/backend/render-pipeline.h>
+#include <albedo/resource-manager.h>
+
 namespace albedo
 {
 
+// TODO: add PIML? is it worth for people to access internal WGPU wrapper?
 class Renderer
 {
 
   public:
 
-    Renderer(WGPUDeviceId deviceId);
+    Renderer(
+      WGPUDeviceId deviceId,
+      WGPUSurfaceId surfaceId,
+      uint32_t width = 0,
+      uint32_t height = 0
+    );
+
+    ~Renderer();
 
   public:
 
@@ -20,23 +32,36 @@ class Renderer
     init();
 
     Renderer&
-    render();
+    resize(uint32_t width, uint32_t height);
 
-    void
-    destroy();
-
-    template <typename T>
     Renderer&
-    deleteResource(T resource);
+    startFrame();
+
+    Renderer&
+    endFrame();
+
+  public:
+
+    inline uint32_t
+    getWidth() { return m_swapChainDescriptor.width; }
+
+    inline uint32_t
+    getHeight() { return m_swapChainDescriptor.height; }
 
   private:
 
-    uint16_t m_renderWidth;
-    uint16_t m_renderHeight;
-
     WGPUDeviceId m_deviceId;
+    WGPUSurfaceId m_surfaceId;
 
+    // TODO: move swap chain out of renderer?
+    WGPUSwapChainDescriptor m_swapChainDescriptor;
+    WGPUSwapChainId m_swapChainId;
 
+    backend::RenderPipeline m_renderPipeline;
+
+    backend::Buffer<BVHNodeGPU> m_nodesBuffer;
+    backend::Buffer<Vertex> m_vertexBuffer;
+    backend::Buffer<Mesh::IndexType> m_indicesBuffer;
 
 };
 

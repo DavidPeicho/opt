@@ -1,4 +1,4 @@
-#include "render-pipeline.h"
+#include <albedo/backend/render-pipeline.h>
 
 namespace albedo
 {
