@@ -59,6 +59,15 @@ Renderer::init()
   WGPUShaderModuleId vertexShader = wgpu_device_create_shader_module(m_deviceId, &vertexModuleDescriptor);
   WGPUShaderModuleId fragmentShader = wgpu_device_create_shader_module(m_deviceId, &fragmentModuleDescriptor);
 
+  WGPUBindGroupLayoutDescriptor bindLayoutGroupDesriptor {
+      .label = "bind group layout",
+      .entries = NULL,
+      .entries_length = 0,
+  };
+  WGPUBindGroupLayoutId bindLayoutGroupId = wgpu_device_create_bind_group_layout(m_deviceId, &bindLayoutGroupDesriptor);
+
+  WGPUBindGroupLayoutId bind_group_layouts[1] = { bindLayoutGroupId };
+
   WGPUPipelineLayoutDescriptor pipelineLayoutDesc{
     .bind_group_layouts = NULL,
     .bind_group_layouts_length = 0,
@@ -70,6 +79,8 @@ Renderer::init()
   m_renderPipeline.create(m_deviceId, pipelineLayoutId);
   m_renderPipeline.bindVertexShader(vertexShader, "main");
   m_renderPipeline.bindVertexShader(fragmentShader, "main");
+
+  m_bindGroup.create(m_deviceId, bindLayoutGroupId);
 
   // TODO: check for errors?
   m_swapChainId = wgpu_device_create_swap_chain(
@@ -129,7 +140,7 @@ Renderer::startFrame()
 
   WGPURenderPassId rpass = wgpu_command_encoder_begin_render_pass(m_commandEncoder, &renderPassDesc);
   wgpu_render_pass_set_pipeline(rpass, m_renderPipeline.id());
-  // wgpu_render_pass_set_bind_group(rpass, 0, bindGroupId, NULL, 0);
+  wgpu_render_pass_set_bind_group(rpass, 0, m_bindGroup.id(), NULL, 0);
   wgpu_render_pass_draw(rpass, 3, 1, 0, 0);
   wgpu_render_pass_end_pass(rpass);
 

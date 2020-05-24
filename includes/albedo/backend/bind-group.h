@@ -1,5 +1,8 @@
+#pragma once
+
+#include <array>
+
 #include <albedo/wgpu.h>
-#include <future>
 
 namespace albedo
 {
@@ -20,18 +23,22 @@ class BindGroup
 
   public:
 
-    template <class T>
+    template <typename T>
     void
     setEntry(T&& entry, uint8_t at);
 
     void
     create(WGPUDeviceId deviceId, WGPUBindGroupLayoutId bindGroupLayoutId);
 
+    inline WGPUBindGroupId
+    id() const { return m_id; }
+
   private:
 
     WGPUBindGroupId m_id;
 
     std::array<WGPUBindGroupEntry, NbEntries> m_entries;
+    WGPUBindGroupDescriptor m_bindGroupDescriptor;
 
 };
 

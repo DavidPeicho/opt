@@ -5,6 +5,7 @@
 #include <albedo/wgpu.h>
 
 #include <albedo/backend/buffer.h>
+#include <albedo/backend/bind-group.h>
 #include <albedo/backend/render-pipeline.h>
 #include <albedo/scene.h>
 
@@ -58,7 +59,9 @@ class Renderer
     WGPUSwapChainId m_swapChainId;
 
     backend::RenderPipeline m_renderPipeline;
-    WGPUCommandEncoderId m_commandEncoder;
+    backend::BindGroup<0> m_bindGroup;
+    WGPUCommandEncoderId m_commandEncoder; // TODO: refactor out?
+
 
     backend::Buffer<BVHNodeGPU> m_nodesBuffer;
     backend::Buffer<Vertex> m_vertexBuffer;
