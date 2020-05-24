@@ -17,10 +17,6 @@ class RenderPipeline
 
   public:
 
-    RenderPipeline() noexcept = default;
-
-  public:
-
     void
     create(WGPUDeviceId deviceId);
 

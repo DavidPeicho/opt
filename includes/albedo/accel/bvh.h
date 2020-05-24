@@ -13,8 +13,8 @@ namespace accel
 
 struct BVHNode
 {
-  static constexpr Mesh::IndexType InternalNodeMask = 0xFFFFFFFF;
-  static constexpr Mesh::IndexType InvalidValue = 0xFFFFFFFF;
+  static constexpr uint32_t InternalNodeMask = 0xFFFFFFFF;
+  static constexpr uint32_t InvalidValue = 0xFFFFFFFF;
 
   inline bool
   isLeaf() const { return primitiveIndex != InternalNodeMask; }
@@ -23,14 +23,14 @@ struct BVHNode
   math::Box3 aabb;
   glm::vec3 center;
 
-  Mesh::IndexType primitiveIndex = 0;
-  Mesh::IndexType leftChild = 0;
-  Mesh::IndexType rightChild = 0;
+  uint32_t primitiveIndex = 0;
+  uint32_t leftChild = 0;
+  uint32_t rightChild = 0;
 };
 
 struct BVH
 {
-  Mesh::IndexType rootIndex;
+  uint32_t rootIndex;
   std::vector<BVHNode> nodes;
 };
 

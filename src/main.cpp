@@ -31,6 +31,10 @@
 #include <albedo/scene.h>
 
 GLFWwindow* window = nullptr;
+WGPUSurfaceId gSurfaceId = 0;
+
+void
+render(albedo::Renderer& renderer);
 
 void
 initialize(WGPUAdapterId adapterId, void*)
@@ -40,9 +44,9 @@ initialize(WGPUAdapterId adapterId, void*)
     .limits = { .max_bind_groups = 1 }
   };
 
-  WGPUDeviceId deviceId = wgpu_adapter_request_device(adapter, &deviceDescriptor);
+  WGPUDeviceId deviceId = wgpu_adapter_request_device(adapterId, &deviceDescriptor);
 
-  albedo::Renderer renderer(deviceId);
+  albedo::Renderer renderer(deviceId, gSurfaceId);
 
   albedo::loader::GLTFLoader loader;
   auto scene = loader.load(renderer, "../box.glb");
@@ -50,14 +54,10 @@ initialize(WGPUAdapterId adapterId, void*)
   if (!scene)
   {
     std::cerr << "Failed to load scene" << std::endl;
-    return 1;
+    return;
   }
 
-  albedo::accel::GPUAccelerationStructure accelerationStructure;
-  accelerationStructure.addMeshes(loader.meshes());
-  accelerationStructure.build(scene.value());
-
-  render();
+  render(renderer);
 }
 
 void render(albedo::Renderer& renderer)
@@ -68,7 +68,7 @@ void render(albedo::Renderer& renderer)
   {
     glfwGetWindowSize(window, &width, &height);
     // Resize if needed.
-    renderer.setSize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+    renderer.resize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
   }
 }
 
@@ -91,17 +91,17 @@ int main() {
   NSWindow* nsWindow = glfwGetCocoaWindow(window);
   [nsWindow.contentView setWantsLayer : YES] ;
   [nsWindow.contentView setLayer : metalLayer] ;
-  WGPUSurfaceId surface; = wgpu_create_surface_from_metal_layer(metalLayer);
+  gSurfaceId = wgpu_create_surface_from_metal_layer(metalLayer);
 
   WGPUAdapterId adapterId = 0;
   WGPURequestAdapterOptions adapterOptions {
     .power_preference = WGPUPowerPreference_LowPower,
-    .compatible_surface = surface
+    .compatible_surface = gSurfaceId
   };
 
   wgpu_request_adapter_async(&adapterOptions, 2 | 4 | 8,
-      request_adapter_callback,
-      initialize
+      initialize,
+      nullptr
   );
 
   glfwDestroyWindow(window);

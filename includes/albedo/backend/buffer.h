@@ -45,25 +45,12 @@ class Buffer
 
   private:
 
-    void
-    readCallback(
-      WGPUBufferMapAsyncStatus status,
-      uint8_t *data,
-      uint8_t *userdata
-    );
-
-    void
-    writeCallback(
-      WGPUBufferMapAsyncStatus status,
-      uint8_t *data,
-      uint8_t *userdata
-    );
-
-  private:
-
     WGPUBufferId m_id;
     WGPUBufferDescriptor m_descriptor;
 
+    std::function<void(WGPUBufferMapAsyncStatus, uint8_t*, uint8_t*)> m_readCallback;
+    std::function<void(WGPUBufferMapAsyncStatus, uint8_t*, uint8_t*)> m_writeCallback;
+    std::promise<WGPUBufferMapAsyncStatus> m_readPromise;
     std::promise<WGPUBufferMapAsyncStatus> m_writePromise;
 
 };

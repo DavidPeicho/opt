@@ -65,14 +65,14 @@ class Mesh
     inline IndexType
     getTrianglesCount() const { return m_indices.size() / 3; }
 
-    inline const BVH&
-    getBVH() const { return m_BVH; }
+    inline const accel::BVH&
+    getBVH() const { return m_bvh; }
 
   private:
     std::string m_name;
     VertexBuffer m_vertices;
     IndexBuffer m_indices;
-    BVH m_bvh;
+    accel::BVH m_bvh;
 };
 
 } // nanespace albedo

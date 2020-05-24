@@ -12,7 +12,6 @@
 #include <albedo/instance.h>
 #include <albedo/material.h>
 #include <albedo/mesh.h>
-#include <albedo/resource-manager.h>
 
 namespace albedo
 {
@@ -41,6 +40,26 @@ struct Renderable
   uint32_t materialIndex;
 };
 
+struct VertexGPU
+{
+  VertexGPU(const Vertex& vertex)
+    : position{vertex.position}
+  { }
+
+  glm::vec3 position;
+  uint32_t padding0;
+};
+
+struct BVHNodeGPU
+{
+  uint32_t primitiveIndex;
+  uint32_t nextNodeIndex;
+  glm::vec3 min;
+  uint32_t padding_0;
+  glm::vec3 max;
+  uint32_t padding_1;
+};
+
 // TODO: template over `InstanceData` to accept extending that.
 // TODO: add method to synchronize resources. What happens if the layout
 // of the ResourceManager changes, we need to sync everything.
@@ -48,7 +67,7 @@ class Scene
 {
 
   public:
-    Scene(const ResourceManager::Ptr& manager);
+    Scene() noexcept = default;
 
     Scene(Scene&&) noexcept = default;
 
@@ -67,6 +86,9 @@ class Scene
 
   public:
 
+    Scene&
+    addMeshes(const std::vector<Mesh::MeshPtr>& meshes);
+
     // TODO: expose a renderable manager directly.
     // TODO: improve API by letting user set the instanc with the mesh?
     Scene&
@@ -75,6 +97,9 @@ class Scene
     // TODO: expose a renderable manager directly.
     Scene&
     deleteRenderable(Instance instance);
+
+    void
+    build(); // TODO: improve this unclear API point.
 
   public:
 
@@ -88,7 +113,10 @@ class Scene
     ComponentArray<Renderable> m_renderables;
     ComponentArray<Material> m_materials;
 
-    ResourceManager::Ptr m_resourceManager;
+    std::vector<Mesh::MeshPtr> m_meshes;
+    std::vector<Vertex> m_vertices; // Vertices of **all** BVH.
+    std::vector<Mesh::IndexBuffer> m_indices; // Indices of **all** BVH.
+    std::vector<BVHNodeGPU> m_nodes; // Nodes of all BVH.
 };
 
 template <typename T>
@@ -107,7 +135,7 @@ inline Transform&
 Scene::data<Transform>(Instance instance) { return m_transforms.data(instance); }
 
 template <>
-inline Mesh::MeshPtr&
-Scene::data<Mesh::MeshPtr>(Instance instance) { return m_meshes.data(instance); }
+inline Renderable&
+Scene::data<Renderable>(Instance instance) { return m_renderables.data(instance); }
 
 } // namespace albedo

@@ -8,9 +8,6 @@
 #include <glm/gtx/norm.hpp>
 #include <glm/gtx/string_cast.hpp>
 
-#include <albedo/wgpu.h>
-#include <albedo/scene.h>
-
 namespace albedo
 {
 

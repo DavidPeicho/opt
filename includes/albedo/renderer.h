@@ -6,7 +6,6 @@
 
 #include <albedo/backend/buffer.h>
 #include <albedo/backend/render-pipeline.h>
-#include <albedo/resource-manager.h>
 
 namespace albedo
 {

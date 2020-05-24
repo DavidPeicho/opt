@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 
 project(webtracer)
 
+set(CMAKE_BUILD_TYPE Debug)
 set(GLFW3_INCLUDE_DIR $ENV{GLFW3_INCLUDE_DIR})
 
 set(TARGET_NAME webtracer)
@@ -17,7 +18,7 @@ if(MSVC)
 elseif(APPLE)
     add_definitions(-DWGPU_TARGET=WGPU_TARGET_MACOS)
     set(OS_LIBRARIES "-framework Cocoa" "-framework CoreVideo" "-framework IOKit" "-framework QuartzCore")
-    target_compile_options(${TARGET_NAME} PRIVATE -std=c++17 -x objective-c++)
+    target_compile_options(${TARGET_NAME} PRIVATE -g -fsanitize=address -fno-omit-frame-pointer -std=c++17 -x objective-c++)
 else(MSVC)
 if(USE_WAYLAND)
     add_definitions(-DWGPU_TARGET=WGPU_TARGET_LINUX_WAYLAND)
@@ -46,4 +47,4 @@ add_subdirectory(src)
 
 target_include_directories(${TARGET_NAME} PUBLIC ${GLFW3_INCLUDE_DIR})
 target_include_directories(${TARGET_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/includes")
-target_link_libraries(${TARGET_NAME} ${GLFW_LIBRARY} ${WGPU_LIBRARY} ${OS_LIBRARIES})
+target_link_libraries(${TARGET_NAME} ${GLFW_LIBRARY} ${WGPU_LIBRARY} ${OS_LIBRARIES} -fsanitize=address)
