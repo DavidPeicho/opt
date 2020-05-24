@@ -9,7 +9,7 @@ Buffer<T>::Buffer() noexcept
 {
   m_descriptor.label = "buffer";
   m_descriptor.size = 0;
-  m_descriptor.usage = WGPUBufferUsage_STORAGE_READ;
+  m_descriptor.usage = WGPUBufferUsage_STORAGE;
 
   m_readCallback = [&](WGPUBufferMapAsyncStatus status, uint8_t *data, uint8_t *userdata)
   {

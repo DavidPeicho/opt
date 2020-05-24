@@ -82,6 +82,9 @@ GLTFLoader::load(Renderer& renderer, const std::string& path)
 
   processMeshes(result, model);
 
+  // TODO: remove when ressource are refactored out of the scene.
+  result.addMeshes(m_meshes);
+
   if (model.scenes.size() == 0) {
     std::cout << model.nodes.size() << std::endl;
     for (const auto& node: model.nodes) {
@@ -178,7 +181,7 @@ GLTFLoader::processNode(
 
   if (node.mesh >= 0)
   {
-    scene.addMesh(instance, m_meshes[node.mesh]);
+    scene.addRenderable(instance, node.mesh);
   }
 
   // Traverse graph.

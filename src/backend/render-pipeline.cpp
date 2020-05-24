@@ -6,7 +6,7 @@ namespace albedo
 namespace backend
 {
 
-RenderPipeline::RenderPipeline()
+RenderPipeline::RenderPipeline() noexcept
 {
   m_fragmentStageDescriptor = { .entry_point = "main" };
 
@@ -40,8 +40,9 @@ RenderPipeline::~RenderPipeline()
 }
 
 void
-RenderPipeline::create(WGPUDeviceId deviceId)
+RenderPipeline::create(WGPUDeviceId deviceId, WGPUPipelineLayoutId pipelineLayoutId)
 {
+  m_descriptor.layout = pipelineLayoutId;
   // TODO: add check for success.
   m_id = wgpu_device_create_render_pipeline(deviceId, &m_descriptor);
 }

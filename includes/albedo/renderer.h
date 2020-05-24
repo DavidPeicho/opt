@@ -6,6 +6,7 @@
 
 #include <albedo/backend/buffer.h>
 #include <albedo/backend/render-pipeline.h>
+#include <albedo/scene.h>
 
 namespace albedo
 {
@@ -19,8 +20,8 @@ class Renderer
     Renderer(
       WGPUDeviceId deviceId,
       WGPUSurfaceId surfaceId,
-      uint32_t width = 0,
-      uint32_t height = 0
+      uint32_t width = 1,
+      uint32_t height = 1
     );
 
     ~Renderer();
@@ -57,6 +58,7 @@ class Renderer
     WGPUSwapChainId m_swapChainId;
 
     backend::RenderPipeline m_renderPipeline;
+    WGPUCommandEncoderId m_commandEncoder;
 
     backend::Buffer<BVHNodeGPU> m_nodesBuffer;
     backend::Buffer<Vertex> m_vertexBuffer;

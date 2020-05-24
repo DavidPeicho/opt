@@ -87,6 +87,9 @@ class Scene
   public:
 
     Scene&
+    addMesh(const Mesh::MeshPtr& mesh);
+
+    Scene&
     addMeshes(const std::vector<Mesh::MeshPtr>& meshes);
 
     // TODO: expose a renderable manager directly.
@@ -115,7 +118,7 @@ class Scene
 
     std::vector<Mesh::MeshPtr> m_meshes;
     std::vector<Vertex> m_vertices; // Vertices of **all** BVH.
-    std::vector<Mesh::IndexBuffer> m_indices; // Indices of **all** BVH.
+    Mesh::IndexBuffer m_indices; // Indices of **all** BVH.
     std::vector<BVHNodeGPU> m_nodes; // Nodes of all BVH.
 };
 

@@ -18,7 +18,7 @@ class RenderPipeline
   public:
 
     void
-    create(WGPUDeviceId deviceId);
+    create(WGPUDeviceId deviceId, WGPUPipelineLayoutId pipelineLayoutId);
 
     // TODO: store a string as the entry?
     void
@@ -27,6 +27,9 @@ class RenderPipeline
     // TODO: store a string as the entry?
     void
     bindFragmentShader(WGPUShaderModuleId module, const char* entry);
+
+    inline WGPURenderPipelineId
+    id() const { return m_id; }
 
   private:
 

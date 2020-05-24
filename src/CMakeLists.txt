@@ -4,6 +4,7 @@ target_sources(webtracer PRIVATE
   instance.cpp
   mesh.cpp
   scene.cpp
+  renderer.cpp
 )
 
 add_subdirectory(backend)

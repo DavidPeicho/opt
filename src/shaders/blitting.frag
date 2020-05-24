@@ -8,7 +8,6 @@ layout(set=0, binding=1) uniform texture2D uTexture;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    // uint index = uint(gl_FragCoord.y * 640 + gl_FragCoord.x);
-    // vec3 color = colors[index];
-    outColor = texture(sampler2D(uTexture, uTextureSampler), vUv).rgba;
+  outColor = vec4(1.0, 0.0, 0.0, 1.0);
+    // outColor = texture(sampler2D(uTexture, uTextureSampler), vUv).rgba;
 }

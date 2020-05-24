@@ -33,31 +33,8 @@
 GLFWwindow* window = nullptr;
 WGPUSurfaceId gSurfaceId = 0;
 
-void
-render(albedo::Renderer& renderer);
-
-void
-initialize(WGPUAdapterId adapterId, void*)
-{
-  WGPUDeviceDescriptor deviceDescriptor{
-    .extensions = { .anisotropic_filtering = false },
-    .limits = { .max_bind_groups = 1 }
-  };
-
-  WGPUDeviceId deviceId = wgpu_adapter_request_device(adapterId, &deviceDescriptor);
-
-  albedo::Renderer renderer(deviceId, gSurfaceId);
-
-  albedo::loader::GLTFLoader loader;
-  auto scene = loader.load(renderer, "../box.glb");
-
-  if (!scene)
-  {
-    std::cerr << "Failed to load scene" << std::endl;
-    return;
-  }
-
-  render(renderer);
+void request_adapter_callback(WGPUAdapterId received, void *userdata) {
+    *(WGPUAdapterId*)userdata = received;
 }
 
 void render(albedo::Renderer& renderer)
@@ -69,6 +46,9 @@ void render(albedo::Renderer& renderer)
     glfwGetWindowSize(window, &width, &height);
     // Resize if needed.
     renderer.resize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+    renderer.startFrame();
+    renderer.endFrame();
+    glfwPollEvents();
   }
 }
 
@@ -100,9 +80,29 @@ int main() {
   };
 
   wgpu_request_adapter_async(&adapterOptions, 2 | 4 | 8,
-      initialize,
-      nullptr
+      request_adapter_callback,
+      &adapterId
   );
+
+  WGPUDeviceDescriptor deviceDescriptor{
+    .extensions = { .anisotropic_filtering = false },
+    .limits = { .max_bind_groups = 1 }
+  };
+
+  WGPUDeviceId deviceId = wgpu_adapter_request_device(adapterId, &deviceDescriptor, NULL);
+
+  albedo::Renderer renderer(deviceId, gSurfaceId);
+
+  albedo::loader::GLTFLoader loader;
+  auto scene = loader.load(renderer, "../box.glb");
+
+  if (!scene)
+  {
+    std::cerr << "Failed to load scene" << std::endl;
+    return 1;
+  }
+
+  render(renderer);
 
   glfwDestroyWindow(window);
   glfwTerminate();

@@ -98,6 +98,14 @@ Scene::deleteRenderable(Instance instance)
 }
 
 Scene&
+Scene::addMesh(const Mesh::MeshPtr& mesh)
+{
+  // TODO: replace by a mesh to BVH tracking.
+  m_meshes.emplace_back(mesh);
+  return *this;
+}
+
+Scene&
 Scene::addMeshes(const std::vector<Mesh::MeshPtr>& meshes)
 {
   // TODO: replace by a mesh to BVH tracking.
@@ -153,7 +161,15 @@ Scene::build()
     std::copy(indices.begin(), indices.end(), m_indices.begin() + startIndices);
     std::copy(vertices.begin(), vertices.end(), m_vertices.begin() + startVertices);
 
-    flattenBVH(m_nodes, bvhs[i].nodes, bvhs[i].rootIndex, startIndices, startNodes);
+    std::vector<BVHNodeGPU>::iterator start = m_nodes.begin();
+    flattenBVH(
+      start,
+      bvhs[i].nodes,
+      bvhs[i].rootIndex,
+      BVHNode::InvalidValue,
+      startIndices,
+      startNodes
+    );
 
     startIndices += indices.size();
     startVertices += vertices.size();
