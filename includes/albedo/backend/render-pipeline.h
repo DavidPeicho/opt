@@ -37,6 +37,7 @@ class RenderPipeline
 
     WGPURenderPipelineDescriptor m_descriptor;
     WGPUProgrammableStageDescriptor m_fragmentStageDescriptor;
+    WGPURasterizationStateDescriptor m_rasterizationStateDescriptor;
     WGPUColorStateDescriptor m_colorStateDescriptor;
 
 };

@@ -73,25 +73,26 @@ int main() {
   [nsWindow.contentView setLayer : metalLayer] ;
   gSurfaceId = wgpu_create_surface_from_metal_layer(metalLayer);
 
-  WGPUAdapterId adapterId = 0;
   WGPURequestAdapterOptions adapterOptions {
     .power_preference = WGPUPowerPreference_LowPower,
     .compatible_surface = gSurfaceId
   };
 
+  WGPUAdapterId adapterId = { 0 };
   wgpu_request_adapter_async(&adapterOptions, 2 | 4 | 8,
       request_adapter_callback,
-      &adapterId
+      (void*)&adapterId
   );
 
   WGPUDeviceDescriptor deviceDescriptor{
     .extensions = { .anisotropic_filtering = false },
-    .limits = { .max_bind_groups = 1 }
+    .limits = { .max_bind_groups = 2 }
   };
 
   WGPUDeviceId deviceId = wgpu_adapter_request_device(adapterId, &deviceDescriptor, NULL);
 
   albedo::Renderer renderer(deviceId, gSurfaceId);
+  renderer.init();
 
   albedo::loader::GLTFLoader loader;
   auto scene = loader.load(renderer, "../box.glb");

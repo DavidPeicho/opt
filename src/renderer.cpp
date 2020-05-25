@@ -69,16 +69,16 @@ Renderer::init()
   WGPUBindGroupLayoutId bind_group_layouts[1] = { bindLayoutGroupId };
 
   WGPUPipelineLayoutDescriptor pipelineLayoutDesc{
-    .bind_group_layouts = NULL,
-    .bind_group_layouts_length = 0,
+    .bind_group_layouts = bind_group_layouts,
+    .bind_group_layouts_length = 1,
   };
 
   // TODO: make that part of render pipeline?
   WGPUPipelineLayoutId pipelineLayoutId = wgpu_device_create_pipeline_layout(m_deviceId, &pipelineLayoutDesc);
 
-  m_renderPipeline.create(m_deviceId, pipelineLayoutId);
   m_renderPipeline.bindVertexShader(vertexShader, "main");
-  m_renderPipeline.bindVertexShader(fragmentShader, "main");
+  m_renderPipeline.bindFragmentShader(fragmentShader, "main");
+  m_renderPipeline.create(m_deviceId, pipelineLayoutId);
 
   m_bindGroup.create(m_deviceId, bindLayoutGroupId);
 
@@ -86,6 +86,8 @@ Renderer::init()
   m_swapChainId = wgpu_device_create_swap_chain(
     m_deviceId, m_surfaceId, &m_swapChainDescriptor
   );
+
+  return *this;
 }
 
 Renderer&
@@ -128,7 +130,7 @@ Renderer::startFrame()
         .attachment = nextSwapTexture.view_id,
         .load_op = WGPULoadOp_Clear,
         .store_op = WGPUStoreOp_Store,
-        .clear_color = WGPUColor_RED,
+        .clear_color = WGPUColor_GREEN,
       },
   };
 
