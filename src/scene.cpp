@@ -13,41 +13,53 @@ using namespace accel;
 
 void
 flattenBVH(
-  std::vector<BVHNodeGPU>::iterator& output,
+  std::vector<BVHNodeGPU>& output,
   const std::vector<BVHNode>& inputs,
   Mesh::IndexType index,
   Mesh::IndexType nextIndex,
   Mesh::IndexType indexOffset,
-  Mesh::IndexType nodeOffset
+  Mesh::IndexType nodeOffset,
+  uint32_t oldIndex
 )
 {
   const BVHNode& node = inputs[index];
 
   BVHNodeGPU result;
+  result.primitiveIndex = BVHNode::InvalidValue;
   result.max = node.aabb.max;
   result.min = node.aabb.min;
-  result.nextNodeIndex = nodeOffset + nextIndex;
+  result.nextNodeIndex = nextIndex != BVHNode::InvalidValue ?
+      nodeOffset + nextIndex
+      : BVHNode::InvalidValue;
+
+  std::cout << "Node | old index = " << oldIndex << " | new index " << output.size() << std::endl;
+  std::cout << " Primitive Index = " << node.primitiveIndex << std::endl;
+  std::cout << " Min(" << glm::to_string(node.aabb.min) << ")" << std::endl;
+  std::cout << " Max(" << glm::to_string(node.aabb.max) << ")" << std::endl;
+  std::cout << " next -> " << nextIndex << std::endl;
+  if (node.isLeaf()) {
+    std::cout << " <leaf node>" << std::endl;
+  }
 
   if (node.isLeaf())
   {
     result.primitiveIndex = indexOffset + node.primitiveIndex;
-    result.nextNodeIndex = BVHNode::InvalidValue;
-    *output = std::move(result);
-    output++;
+    output.emplace_back(std::move(result));
     return;
   }
 
+  // std::cout << " Next -> " << node. << std::endl;
+
+  output.emplace_back(std::move(result));
   if (node.leftChild != BVHNode::InvalidValue)
   {
-    flattenBVH(output, inputs, node.leftChild, node.rightChild, indexOffset, nodeOffset);
+    const auto& left = inputs[node.leftChild];
+    flattenBVH(output, inputs, node.leftChild, left.subtreeSize + 1 + output.size(), indexOffset, nodeOffset, node.leftChild);
   }
   if (node.rightChild != BVHNode::InvalidValue)
   {
-    flattenBVH(output, inputs, node.rightChild, nextIndex, indexOffset, nodeOffset);
+    flattenBVH(output, inputs, node.rightChild, nextIndex, indexOffset, nodeOffset, node.rightChild);
   }
-
-  *output = std::move(result);
-  output++;
 }
 
 }
@@ -122,19 +134,18 @@ Scene::build()
   // needed.
 
   // TODO: move somewhere else. Shouldnt be created and destroyed.
-  std::vector<BVH> bvhs(m_meshes.size());
 
   size_t totalNumberIndices = 0;
   size_t totalNumberVertices = 0;
   size_t totalNumberNodes = 0;
-  for (const auto& m: m_meshes)
+  for (auto& m: m_meshes)
   {
-    SAHBuilder<2> builder;
-    auto bvh = builder.build(*m);
+    // TODO: discard empty BVH.
+    SAHBuilder<2> builder(m->getBVH());
+    builder.build(*m);
     totalNumberVertices += m->getVertexBuffer().size();
-    totalNumberNodes += bvh.nodes.size();
+    totalNumberNodes += m->getBVH().nodes.size();
     totalNumberIndices += m->getIndices().size();
-    bvhs.emplace_back(std::move(bvh));
   }
 
   // TODO: need a way to map from mesh to the first index of its data in
@@ -151,30 +162,43 @@ Scene::build()
   Mesh::IndexType startVertices = 0;
   Mesh::IndexType startNodes = 0;
   // TODO: parralele for.
-  for (size_t i = 0; i < bvhs.size(); ++i)
+  for (size_t i = 0; i < m_meshes.size(); ++i)
   {
-    const auto& mesh = *m_meshes[i];
+    auto& mesh = *m_meshes[i];
     const auto& bvh = mesh.getBVH();
     const auto& indices = mesh.getIndices();
     const auto& vertices = mesh.getVertexBuffer();
 
-    std::copy(indices.begin(), indices.end(), m_indices.begin() + startIndices);
-    std::copy(vertices.begin(), vertices.end(), m_vertices.begin() + startVertices);
+    m_indices.insert(m_indices.begin() + startIndices, indices.begin(), indices.end());
+    m_vertices.insert(m_vertices.begin() + startVertices, vertices.begin(), vertices.end());
 
     std::vector<BVHNodeGPU>::iterator start = m_nodes.begin();
     flattenBVH(
-      start,
-      bvhs[i].nodes,
-      bvhs[i].rootIndex,
-      BVHNode::InvalidValue,
+      m_nodes,
+      bvh.nodes,
+      bvh.rootIndex,
+      1,
       startIndices,
-      startNodes
+      startNodes,
+      0
     );
 
     startIndices += indices.size();
     startVertices += vertices.size();
     startNodes += bvh.nodes.size();
   }
+
+  // #DEBUG
+  /* for (size_t i = 0; i < m_nodes.size(); ++i)
+  {
+    const auto& node = m_nodes[i];
+    std::cout << "Node = " << i << std::endl;
+    std::cout << " Primitive Index = " << node.primitiveIndex << std::endl;
+    std::cout << " Min(" << glm::to_string(node.min) << ")" << std::endl;
+    std::cout << " Max(" << glm::to_string(node.max) << ")" << std::endl;
+    std::cout << " Next -> " << node.nextNodeIndex << std::endl;
+  } */
+  // #ENDDEBUG
 }
 
 } // namespace albedo

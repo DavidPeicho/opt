@@ -65,8 +65,8 @@ class Mesh
     inline IndexType
     getTrianglesCount() const { return m_indices.size() / 3; }
 
-    inline const accel::BVH&
-    getBVH() const { return m_bvh; }
+    inline accel::BVH&
+    getBVH() { return m_bvh; }
 
   private:
     std::string m_name;

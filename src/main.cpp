@@ -103,6 +103,7 @@ int main() {
     return 1;
   }
 
+  scene.value().build();
   render(renderer);
 
   glfwDestroyWindow(window);

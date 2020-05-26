@@ -150,19 +150,21 @@ recursiveBuild(
   });
 
   Mesh::IndexType mid = iterator - nodes.begin();
-  if (mid == start)
-  {
-    mid = (start + end) * 0.5;
-    node.leftChild = recursiveBuild<BinCount>(nodes, bins, start, mid);
-    node.rightChild = recursiveBuild<BinCount>(nodes, bins, mid, end);
-    return nodeIndex;
-  }
+  if (mid == start) { mid = (start + end) * 0.5; }
 
   auto leftChild = recursiveBuild<BinCount>(nodes, bins, start, mid);
   auto rightChild = recursiveBuild<BinCount>(nodes, bins, mid, end);
 
   node.leftChild = leftChild;
   node.rightChild = rightChild;
+  if (node.leftChild != BVHNode::InternalNodeMask)
+  {
+    node.subtreeSize += 1 + nodes[node.leftChild].subtreeSize;
+  }
+  if (node.rightChild != BVHNode::InternalNodeMask)
+  {
+    node.subtreeSize += 1 + nodes[node.rightChild].subtreeSize;
+  }
 
   return nodeIndex;
 }
@@ -170,11 +172,16 @@ recursiveBuild(
 }
 
 template <Mesh::IndexType BinCount>
-BVH
+SAHBuilder<BinCount>::SAHBuilder(BVH& bvh)
+  : m_bvh{bvh}
+{ }
+
+template <Mesh::IndexType BinCount>
+void
 SAHBuilder<BinCount>::build(const Mesh& mesh)
 {
   auto nbTriangles = mesh.getTrianglesCount();
-  if (nbTriangles == 0) { return BVH{}; }
+  if (nbTriangles == 0) { return; }
 
   // Initializes bin.
   for (auto& bin: m_bins)
@@ -208,20 +215,21 @@ SAHBuilder<BinCount>::build(const Mesh& mesh)
 
   auto rootIndex = recursiveBuild<BinCount>(nodes, m_bins, 0, nodes.size());
 
+  // #DEBUG
   std::cout << "Root = " << rootIndex << std::endl;
   for (size_t i = 0; i < nodes.size(); ++i)
   {
     const auto& n = nodes[i];
     std::cout << "Node = " << i << std::endl;
     std::cout << " Primitive Index = " << n.primitiveIndex << std::endl;
+    std::cout << " Span -> " << n.subtreeSize << std::endl;
     std::cout << " Left -> " << n.leftChild << std::endl;
     std::cout << " Right -> " << n.rightChild << std::endl;
   }
+  // #ENDDEBUG
 
-  BVH bvh;
-  bvh.nodes = std::move(nodes);
-  bvh.rootIndex = rootIndex;
-  return bvh;
+  m_bvh.nodes = std::move(nodes);
+  m_bvh.rootIndex = rootIndex;
 }
 
 }

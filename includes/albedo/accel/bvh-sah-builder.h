@@ -25,15 +25,18 @@ template <Mesh::IndexType BinCount = 12>
 class SAHBuilder
 {
 
-  friend BVH;
+  public:
+
+    SAHBuilder(BVH& bvh);
 
   public:
 
-    BVH
+    void
     build(const Mesh&);
 
   private:
 
+    BVH& m_bvh;
     std::array<Bin, BinCount> m_bins;
 
 };

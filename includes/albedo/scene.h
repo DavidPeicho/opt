@@ -50,14 +50,13 @@ struct VertexGPU
   uint32_t padding0;
 };
 
+// TODO: Separate leaf from internal nodes.
 struct BVHNodeGPU
 {
   uint32_t primitiveIndex;
   uint32_t nextNodeIndex;
   glm::vec3 min;
-  uint32_t padding_0;
   glm::vec3 max;
-  uint32_t padding_1;
 };
 
 // TODO: template over `InstanceData` to accept extending that.

@@ -23,6 +23,7 @@ struct BVHNode
   math::Box3 aabb;
   glm::vec3 center;
 
+  size_t subtreeSize = 0;
   uint32_t primitiveIndex = 0;
   uint32_t leftChild = 0;
   uint32_t rightChild = 0;
