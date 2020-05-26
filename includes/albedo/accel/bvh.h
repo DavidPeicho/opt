@@ -17,14 +17,14 @@ struct BVHNode
   static constexpr uint32_t InvalidValue = 0xFFFFFFFF;
 
   inline bool
-  isLeaf() const { return primitiveIndex != InternalNodeMask; }
+  isLeaf() const { return primitiveStartIndex != InternalNodeMask; }
 
   // TODO: custom data for build should go in the builder.
   math::Box3 aabb;
   glm::vec3 center;
 
-  size_t subtreeSize = 0;
-  uint32_t primitiveIndex = 0;
+  size_t forestSize = 0;
+  uint32_t primitiveStartIndex = 0;
   uint32_t leftChild = 0;
   uint32_t rightChild = 0;
 };

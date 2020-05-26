@@ -157,13 +157,13 @@ recursiveBuild(
 
   node.leftChild = leftChild;
   node.rightChild = rightChild;
-  if (node.leftChild != BVHNode::InternalNodeMask)
+  if (leftChild != BVHNode::InternalNodeMask)
   {
-    node.subtreeSize += 1 + nodes[node.leftChild].subtreeSize;
+    node.subtreeSize += 1 + nodes[leftChild].subtreeSize;
   }
-  if (node.rightChild != BVHNode::InternalNodeMask)
+  if (rightChild != BVHNode::InternalNodeMask)
   {
-    node.subtreeSize += 1 + nodes[node.rightChild].subtreeSize;
+    node.subtreeSize += 1 + nodes[rightChild].subtreeSize;
   }
 
   return nodeIndex;
@@ -205,7 +205,7 @@ SAHBuilder<BinCount>::build(const Mesh& mesh)
     const auto& v1 = vertices[indices[i + 1]].position;
     const auto& v2 = vertices[indices[i + 2]].position;
     BVHNode node;
-    node.primitiveIndex = i; // TODO: replace name by indexStart
+    node.primitiveStartIndex = i;
     node.aabb.expand(v0).expand(v1).expand(v2);
     node.center = node.aabb.center();
     node.leftChild = BVHNode::InternalNodeMask;
@@ -220,11 +220,13 @@ SAHBuilder<BinCount>::build(const Mesh& mesh)
   for (size_t i = 0; i < nodes.size(); ++i)
   {
     const auto& n = nodes[i];
-    std::cout << "Node = " << i << std::endl;
+    /* std::cout << "Node = " << i << std::endl;
     std::cout << " Primitive Index = " << n.primitiveIndex << std::endl;
     std::cout << " Span -> " << n.subtreeSize << std::endl;
     std::cout << " Left -> " << n.leftChild << std::endl;
-    std::cout << " Right -> " << n.rightChild << std::endl;
+    std::cout << " Right -> " << n.rightChild << std::endl; */
+    std::cout << i << " -> " << n.leftChild << std::endl;
+    std::cout << i << " -> " << n.rightChild << std::endl;
   }
   // #ENDDEBUG
 

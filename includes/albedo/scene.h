@@ -53,8 +53,9 @@ struct VertexGPU
 // TODO: Separate leaf from internal nodes.
 struct BVHNodeGPU
 {
-  uint32_t primitiveIndex;
+  uint32_t primitiveStartIndex;
   uint32_t nextNodeIndex;
+  uint32_t oldIndex;
   glm::vec3 min;
   glm::vec3 max;
 };

@@ -11,55 +11,50 @@ namespace
 
 using namespace accel;
 
+// TODO: cleanup function. Starts to be difficult to track what starts where
+// with all those offsets.
 void
 flattenBVH(
   std::vector<BVHNodeGPU>& output,
   const std::vector<BVHNode>& inputs,
-  Mesh::IndexType index,
-  Mesh::IndexType nextIndex,
-  Mesh::IndexType indexOffset,
-  Mesh::IndexType nodeOffset,
-  uint32_t oldIndex
+  Mesh::IndexType nodeId,
+  Mesh::IndexType lastSibling,
+  Mesh::IndexType indicesOffset,
+  Mesh::IndexType nodeOffset
 )
 {
-  const BVHNode& node = inputs[index];
+  const BVHNode& node = inputs[nodeId];
 
-  BVHNodeGPU result;
-  result.primitiveIndex = BVHNode::InvalidValue;
-  result.max = node.aabb.max;
-  result.min = node.aabb.min;
-  result.nextNodeIndex = nextIndex != BVHNode::InvalidValue ?
-      nodeOffset + nextIndex
-      : BVHNode::InvalidValue;
+  output.emplace_back(BVHNodeGPU {
+    .primitiveStartIndex = BVHNode::InvalidValue,
+    .max = node.aabb.max,
+    .min = node.aabb.min,
+    .nextNodeIndex = BVHNode::InvalidValue,
+    .oldIndex = nodeId
+  });
 
-  std::cout << "Node | old index = " << oldIndex << " | new index " << output.size() << std::endl;
-  std::cout << " Primitive Index = " << node.primitiveIndex << std::endl;
-  std::cout << " Min(" << glm::to_string(node.aabb.min) << ")" << std::endl;
-  std::cout << " Max(" << glm::to_string(node.aabb.max) << ")" << std::endl;
-  std::cout << " next -> " << nextIndex << std::endl;
-  if (node.isLeaf()) {
-    std::cout << " <leaf node>" << std::endl;
+  auto& resultNode = output.back();
+
+  if (node.leftChild != BVHNode::InvalidValue)
+  {
+    const auto& leftChild = inputs[node.leftChild];
+    auto siblingIndex = leftChild.forestSize + (output.size() - nodeOffset) + 1;
+    flattenBVH(output, inputs, node.leftChild, siblingIndex, indicesOffset, nodeOffset);
+  }
+
+  // resultNode.nextNodeIndex = nodeOffset + output.size();
+
+  if (node.rightChild != BVHNode::InvalidValue)
+  {
+    flattenBVH(output, inputs, node.rightChild, lastSibling, indicesOffset, nodeOffset);
   }
 
   if (node.isLeaf())
   {
-    result.primitiveIndex = indexOffset + node.primitiveIndex;
-    output.emplace_back(std::move(result));
-    return;
+    resultNode.primitiveStartIndex = indicesOffset + node.primitiveStartIndex;
   }
 
-  // std::cout << " Next -> " << node. << std::endl;
-
-  output.emplace_back(std::move(result));
-  if (node.leftChild != BVHNode::InvalidValue)
-  {
-    const auto& left = inputs[node.leftChild];
-    flattenBVH(output, inputs, node.leftChild, left.subtreeSize + 1 + output.size(), indexOffset, nodeOffset, node.leftChild);
-  }
-  if (node.rightChild != BVHNode::InvalidValue)
-  {
-    flattenBVH(output, inputs, node.rightChild, nextIndex, indexOffset, nodeOffset, node.rightChild);
-  }
+  resultNode.nextNodeIndex = lastSibling;
 }
 
 }
@@ -177,11 +172,11 @@ Scene::build()
       m_nodes,
       bvh.nodes,
       bvh.rootIndex,
-      1,
+      BVHNode::InvalidValue,
       startIndices,
-      startNodes,
-      0
+      startNodes
     );
+    m_nodes.back().nextNodeIndex = BVHNode::InvalidValue;
 
     startIndices += indices.size();
     startVertices += vertices.size();
@@ -189,15 +184,15 @@ Scene::build()
   }
 
   // #DEBUG
-  /* for (size_t i = 0; i < m_nodes.size(); ++i)
+  for (size_t i = 0; i < m_nodes.size(); ++i)
   {
     const auto& node = m_nodes[i];
-    std::cout << "Node = " << i << std::endl;
-    std::cout << " Primitive Index = " << node.primitiveIndex << std::endl;
+    std::cout << "Node - Old Index " << node.oldIndex << " - New Index " << i << std::endl;
+    std::cout << " Primitive Index = " << node.primitiveStartIndex << std::endl;
     std::cout << " Min(" << glm::to_string(node.min) << ")" << std::endl;
     std::cout << " Max(" << glm::to_string(node.max) << ")" << std::endl;
     std::cout << " Next -> " << node.nextNodeIndex << std::endl;
-  } */
+  }
   // #ENDDEBUG
 }
 
