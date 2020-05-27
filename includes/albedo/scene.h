@@ -55,11 +55,10 @@ struct BVHNodeGPU
 {
   using NodeList = std::vector<BVHNodeGPU>;
 
-  uint32_t primitiveStartIndex;
-  uint32_t nextNodeIndex;
-  uint32_t oldIndex;
   glm::vec3 min;
+  uint32_t nextNodeIndex;
   glm::vec3 max;
+  uint32_t primitiveStartIndex;
 };
 
 // TODO: template over `InstanceData` to accept extending that.
@@ -67,6 +66,8 @@ struct BVHNodeGPU
 // of the ResourceManager changes, we need to sync everything.
 class Scene
 {
+
+  friend class Renderer;
 
   public:
     Scene() noexcept = default;

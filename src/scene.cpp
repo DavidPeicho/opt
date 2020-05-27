@@ -47,11 +47,11 @@ class FlattenTask {
       const BVHNode& node = inputs[inputIndex];
 
       m_output.insert(m_output.begin() + m_curr, BVHNodeGPU {
-        .primitiveStartIndex = BVHNode::InvalidValue,
-        .max = node.aabb.max,
         .min = node.aabb.min,
+        .max = node.aabb.max,
         .nextNodeIndex = BVHNode::InvalidValue,
-        .oldIndex = inputIndex
+        .primitiveStartIndex = BVHNode::InvalidValue
+        // .oldIndex = inputIndex
       });
       auto& resultNode = m_output.back();
       m_curr++;
@@ -226,11 +226,11 @@ Scene::build()
     startNodes += bvh.nodes.size();
   }
 
-  #if 0
+  #if 1
   for (size_t i = 0; i < m_nodes.size(); ++i)
   {
     const auto& node = m_nodes[i];
-    std::cout << "Node - Old Index " << node.oldIndex << " - New Index " << i << std::endl;
+    // std::cout << "Node - Old Index " << node.oldIndex << " - New Index " << i << std::endl;
     std::cout << " Primitive Index = " << node.primitiveStartIndex << std::endl;
     std::cout << " Min(" << glm::to_string(node.min) << ")" << std::endl;
     std::cout << " Max(" << glm::to_string(node.max) << ")" << std::endl;

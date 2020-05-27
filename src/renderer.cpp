@@ -48,22 +48,31 @@ Renderer::~Renderer()
 }
 
 Renderer&
-Renderer::init()
+Renderer::init(const Scene& scene)
 {
   WGPUShaderModuleDescriptor vertexModuleDescriptor{
       .code = readFile("../src/shaders/blitting.vert.spv"),
   };
   WGPUShaderModuleDescriptor fragmentModuleDescriptor{
-      .code = readFile("../src/shaders/blitting.frag.spv"),
+      .code = readFile("../src/shaders/debug.frag.spv"),
   };
   WGPUShaderModuleId vertexShader = wgpu_device_create_shader_module(m_deviceId, &vertexModuleDescriptor);
   WGPUShaderModuleId fragmentShader = wgpu_device_create_shader_module(m_deviceId, &fragmentModuleDescriptor);
 
+  const WGPUBindGroupLayoutEntry layoutEntries[1] = {
+        {
+            .binding = 0,
+            .visibility = WGPUShaderStage_FRAGMENT,
+            .ty = WGPUBindingType_ReadonlyStorageBuffer
+        }
+    };
+
   WGPUBindGroupLayoutDescriptor bindLayoutGroupDesriptor {
       .label = "bind group layout",
-      .entries = NULL,
-      .entries_length = 0,
+      .entries = layoutEntries,
+      .entries_length = 1,
   };
+
   WGPUBindGroupLayoutId bindLayoutGroupId = wgpu_device_create_bind_group_layout(m_deviceId, &bindLayoutGroupDesriptor);
 
   WGPUBindGroupLayoutId bind_group_layouts[1] = { bindLayoutGroupId };
@@ -80,6 +89,21 @@ Renderer::init()
   m_renderPipeline.bindFragmentShader(fragmentShader, "main");
   m_renderPipeline.create(m_deviceId, pipelineLayoutId);
 
+  m_nodesBuffer.create(m_deviceId, &scene.m_nodes[0], scene.m_nodes.size());
+
+  WGPUBindingResource inputResource = {
+    .tag = WGPUBindingResource_Buffer,
+      .buffer = (WGPUBufferBinding) {
+          .buffer = m_nodesBuffer.id(),
+          .size = m_nodesBuffer.getByteSize(),
+          .offset = 0
+      }
+  };
+
+  m_bindGroup.setEntry(WGPUBindGroupEntry {
+      .binding = 0,
+			.resource = inputResource
+  }, 0);
   m_bindGroup.create(m_deviceId, bindLayoutGroupId);
 
   // TODO: check for errors?

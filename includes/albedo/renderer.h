@@ -29,8 +29,14 @@ class Renderer
 
   public:
 
+    // TODO: for now, the scene BVH is assumed to be completly built at this
+    // stage.
+    //
+    // TODO: `init` should not automatically build and send the BVH to the GPU.
+    // Could be a good idea to make the user explicitly do that and to give
+    // him more control.
     Renderer&
-    init();
+    init(const Scene& scene);
 
     Renderer&
     resize(uint32_t width, uint32_t height);
@@ -59,9 +65,8 @@ class Renderer
     WGPUSwapChainId m_swapChainId;
 
     backend::RenderPipeline m_renderPipeline;
-    backend::BindGroup<0> m_bindGroup;
+    backend::BindGroup<1> m_bindGroup;
     WGPUCommandEncoderId m_commandEncoder; // TODO: refactor out?
-
 
     backend::Buffer<BVHNodeGPU> m_nodesBuffer;
     backend::Buffer<Vertex> m_vertexBuffer;

@@ -7,6 +7,7 @@ namespace albedo
 namespace backend
 {
 
+// TODO: create a base class for all resources?
 // TODO: move to sources and use PIMPL.
 template <class T>
 class Buffer
@@ -46,6 +47,9 @@ class Buffer
 
     std::future<WGPUBufferMapAsyncStatus>
     write(const T* const data, size_t start, size_t count);
+
+    inline WGPUBindGroupId
+    id() const { return m_id; }
 
   private:
 

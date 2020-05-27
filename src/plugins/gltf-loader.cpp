@@ -61,7 +61,7 @@ namespace
 }
 
 std::optional<Scene>
-GLTFLoader::load(Renderer& renderer, const std::string& path)
+GLTFLoader::load(const std::string& path)
 {
   tinygltf::Model model;
   std::string err;

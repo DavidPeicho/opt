@@ -27,8 +27,11 @@
 #endif
 #include <GLFW/glfw3native.h>
 
+#include <albedo/wgpu.h>
+
 #include <albedoloader/gltf-loader.h>
 #include <albedo/scene.h>
+#include <albedo/renderer.h>
 
 GLFWwindow* window = nullptr;
 WGPUSurfaceId gSurfaceId = 0;
@@ -91,19 +94,21 @@ int main() {
 
   WGPUDeviceId deviceId = wgpu_adapter_request_device(adapterId, &deviceDescriptor, NULL);
 
-  albedo::Renderer renderer(deviceId, gSurfaceId);
-  renderer.init();
-
   albedo::loader::GLTFLoader loader;
-  auto scene = loader.load(renderer, "../box.glb");
+  auto sceneOptional = loader.load("../box.glb");
 
-  if (!scene)
+  if (!sceneOptional)
   {
     std::cerr << "Failed to load scene" << std::endl;
     return 1;
   }
 
-  scene.value().build();
+  auto& scene = sceneOptional.value();
+  scene.build();
+
+  albedo::Renderer renderer(deviceId, gSurfaceId);
+  renderer.init(scene);
+
   render(renderer);
 
   glfwDestroyWindow(window);

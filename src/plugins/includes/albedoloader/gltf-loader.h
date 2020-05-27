@@ -6,7 +6,6 @@
 #include <glm/glm.hpp>
 #include <albedo/mesh.h>
 #include <albedo/scene.h>
-#include <albedo/renderer.h>
 
 #define TINYGLTF_NO_STB_IMAGE
 #include <albedoloader/tiny_gltf.h>
@@ -22,7 +21,7 @@ class GLTFLoader
   public:
 
     std::optional<Scene>
-    load(Renderer& renderer, const std::string& path);
+    load(const std::string& path);
 
   public:
 
@@ -42,9 +41,6 @@ class GLTFLoader
     std::vector<Mesh::MeshPtr> m_meshes;
 
 };
-
-std::optional<Scene>
-glTFLoadScene(Renderer& renderer, const std::string& path);
 
 } // nanespace scene
 
