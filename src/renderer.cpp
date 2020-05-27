@@ -35,6 +35,8 @@ Renderer::Renderer(
   : m_deviceId{deviceId}
   , m_surfaceId{surfaceId}
 {
+  m_info.width = width;
+  m_info.height = height;
   m_swapChainDescriptor.usage = WGPUTextureUsage_OUTPUT_ATTACHMENT;
   m_swapChainDescriptor.format = WGPUTextureFormat_Bgra8Unorm;
   m_swapChainDescriptor.present_mode = WGPUPresentMode_Fifo;
@@ -59,18 +61,23 @@ Renderer::init(const Scene& scene)
   WGPUShaderModuleId vertexShader = wgpu_device_create_shader_module(m_deviceId, &vertexModuleDescriptor);
   WGPUShaderModuleId fragmentShader = wgpu_device_create_shader_module(m_deviceId, &fragmentModuleDescriptor);
 
-  const WGPUBindGroupLayoutEntry layoutEntries[1] = {
-        {
-            .binding = 0,
-            .visibility = WGPUShaderStage_FRAGMENT,
-            .ty = WGPUBindingType_ReadonlyStorageBuffer
-        }
+  const WGPUBindGroupLayoutEntry layoutEntries[2] = {
+      {
+          .binding = 0,
+          .visibility = WGPUShaderStage_FRAGMENT,
+          .ty = WGPUBindingType_UniformBuffer
+      },
+      {
+          .binding = 1,
+          .visibility = WGPUShaderStage_FRAGMENT,
+          .ty = WGPUBindingType_ReadonlyStorageBuffer
+      },
     };
 
   WGPUBindGroupLayoutDescriptor bindLayoutGroupDesriptor {
       .label = "bind group layout",
       .entries = layoutEntries,
-      .entries_length = 1,
+      .entries_length = 2,
   };
 
   WGPUBindGroupLayoutId bindLayoutGroupId = wgpu_device_create_bind_group_layout(m_deviceId, &bindLayoutGroupDesriptor);
@@ -89,7 +96,20 @@ Renderer::init(const Scene& scene)
   m_renderPipeline.bindFragmentShader(fragmentShader, "main");
   m_renderPipeline.create(m_deviceId, pipelineLayoutId);
 
+  m_renderInfoBuffer.setUsage(WGPUBufferUsage_COPY_DST | WGPUBufferUsage_UNIFORM);
+  m_renderInfoBuffer.setSize(1);
+  m_renderInfoBuffer.create(m_deviceId);
+
   m_nodesBuffer.create(m_deviceId, &scene.m_nodes[0], scene.m_nodes.size());
+
+  WGPUBindingResource uniformResource = {
+    .tag = WGPUBindingResource_Buffer,
+      .buffer = (WGPUBufferBinding) {
+          .buffer = m_renderInfoBuffer.id(),
+          .size = m_renderInfoBuffer.getByteSize(),
+          .offset = 0
+      }
+  };
 
   WGPUBindingResource inputResource = {
     .tag = WGPUBindingResource_Buffer,
@@ -102,8 +122,12 @@ Renderer::init(const Scene& scene)
 
   m_bindGroup.setEntry(WGPUBindGroupEntry {
       .binding = 0,
-			.resource = inputResource
+			.resource = uniformResource
   }, 0);
+  m_bindGroup.setEntry(WGPUBindGroupEntry {
+      .binding = 1,
+			.resource = inputResource
+  }, 1);
   m_bindGroup.create(m_deviceId, bindLayoutGroupId);
 
   // TODO: check for errors?
@@ -117,14 +141,25 @@ Renderer::init(const Scene& scene)
 Renderer&
 Renderer::resize(uint32_t width, uint32_t height)
 {
-  const auto previousWidth = m_swapChainDescriptor.width;
-  const auto previousHeight = m_swapChainDescriptor.height;
+  const auto previousWidth = m_info.width;
+  const auto previousHeight = m_info.height;
   if (width != previousWidth || height != previousHeight)
   {
+    m_info.width = width;
+    m_info.height = height;
     m_swapChainDescriptor.width = width;
     m_swapChainDescriptor.height = height;
     m_swapChainId = wgpu_device_create_swap_chain(
       m_deviceId, m_surfaceId, &m_swapChainDescriptor
+    );
+
+    WGPUQueueId queue = wgpu_device_get_default_queue(m_deviceId);
+    wgpu_queue_write_buffer(
+      queue,
+      reinterpret_cast<uint8_t*>(&m_info),
+      sizeof (RenderInfo),
+      m_renderInfoBuffer.id(),
+      0
     );
   }
   return *this;

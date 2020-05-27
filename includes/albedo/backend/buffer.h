@@ -9,6 +9,8 @@ namespace backend
 
 // TODO: create a base class for all resources?
 // TODO: move to sources and use PIMPL.
+// TODO: use Builder pattern to enforce creating a buffer that is already
+// sanely configured.
 template <class T>
 class Buffer
 {
@@ -29,6 +31,12 @@ class Buffer
 
     inline void
     setUsage(WGPUBufferUsage usage) { m_descriptor.usage = usage; }
+
+    inline void
+    setSize(size_t elementCount)
+    {
+      m_descriptor.size = sizeof (T) * elementCount;
+    }
 
     inline size_t
     getByteSize() { return m_descriptor.size; }

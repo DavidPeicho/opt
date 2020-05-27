@@ -12,6 +12,15 @@
 namespace albedo
 {
 
+// TODO: padding can be removed from the CPU as the buffer is copied only
+// from the byte 0 to the byte offset of the `height` field.
+struct RenderInfo {
+  uint width;
+  uint height;
+  uint pad_0;
+  uint pad_1;
+};
+
 // TODO: add PIML? is it worth for people to access internal WGPU wrapper?
 class Renderer
 {
@@ -57,6 +66,8 @@ class Renderer
 
   private:
 
+    RenderInfo m_info;
+
     WGPUDeviceId m_deviceId;
     WGPUSurfaceId m_surfaceId;
 
@@ -65,9 +76,10 @@ class Renderer
     WGPUSwapChainId m_swapChainId;
 
     backend::RenderPipeline m_renderPipeline;
-    backend::BindGroup<1> m_bindGroup;
+    backend::BindGroup<2> m_bindGroup;
     WGPUCommandEncoderId m_commandEncoder; // TODO: refactor out?
 
+    backend::Buffer<RenderInfo> m_renderInfoBuffer;
     backend::Buffer<BVHNodeGPU> m_nodesBuffer;
     backend::Buffer<Vertex> m_vertexBuffer;
     backend::Buffer<Mesh::IndexType> m_indicesBuffer;
