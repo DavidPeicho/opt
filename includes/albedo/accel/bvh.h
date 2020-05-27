@@ -31,6 +31,8 @@ struct BVHNode
 
 struct BVH
 {
+  using NodeList = std::vector<BVHNode>;
+
   uint32_t rootIndex;
   std::vector<BVHNode> nodes;
 };

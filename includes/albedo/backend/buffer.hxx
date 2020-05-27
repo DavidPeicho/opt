@@ -32,8 +32,29 @@ template <typename T>
 void
 Buffer<T>::create(WGPUDeviceId deviceId)
 {
-  // TODO: add check for success.¬
+  // TODO: destroy previous
+  // TODO: add check for success.
   m_id = wgpu_device_create_buffer(deviceId, &m_descriptor);
+}
+
+template <typename T>
+void
+Buffer<T>::create(WGPUDeviceId deviceId, const T* const data, size_t count)
+{
+  // TODO: destroy previous
+  // TODO: add check for success.
+  m_descriptor.size = sizeof (T) * count;
+
+  T* staging_memory = nullptr;
+  WGPUBufferId buffer = wgpu_device_create_buffer_mapped(
+    deviceId,
+    &m_descriptor,
+    &staging_memory
+  );
+  std::memcpy(staging_memory, data, m_descriptor.size);
+	wgpu_buffer_unmap(buffer);
+
+  return buffer;
 }
 
 template <typename T>

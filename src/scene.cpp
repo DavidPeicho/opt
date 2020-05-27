@@ -11,51 +11,96 @@ namespace
 
 using namespace accel;
 
-// TODO: cleanup function. Starts to be difficult to track what starts where
-// with all those offsets.
-void
-flattenBVH(
-  std::vector<BVHNodeGPU>& output,
-  const std::vector<BVHNode>& inputs,
-  Mesh::IndexType nodeId,
-  Mesh::IndexType lastSibling,
-  Mesh::IndexType indicesOffset,
-  Mesh::IndexType nodeOffset
-)
-{
-  const BVHNode& node = inputs[nodeId];
+class FlattenTask {
 
-  output.emplace_back(BVHNodeGPU {
-    .primitiveStartIndex = BVHNode::InvalidValue,
-    .max = node.aabb.max,
-    .min = node.aabb.min,
-    .nextNodeIndex = BVHNode::InvalidValue,
-    .oldIndex = nodeId
-  });
+  public:
 
-  auto& resultNode = output.back();
+    inline
+    FlattenTask(
+      BVHNodeGPU::NodeList& output,
+      Mesh::IndexType start,
+      Mesh::IndexType end,
+      Mesh::IndexType primitiveIndexStart
+    )
+      : m_output{output}
+      , m_start(start)
+      , m_end(end)
+      , m_curr(start)
+      , m_primitiveIndexStart(primitiveIndexStart)
+    { }
 
-  if (node.leftChild != BVHNode::InvalidValue)
-  {
-    const auto& leftChild = inputs[node.leftChild];
-    auto siblingIndex = leftChild.forestSize + (output.size() - nodeOffset) + 1;
-    flattenBVH(output, inputs, node.leftChild, siblingIndex, indicesOffset, nodeOffset);
-  }
+  public:
 
-  // resultNode.nextNodeIndex = nodeOffset + output.size();
+    void
+    flatten(const BVH::NodeList& inputs, Mesh::IndexType rootNode)
+    {
+      flatten(inputs, rootNode, BVHNode::InvalidValue);
+    }
 
-  if (node.rightChild != BVHNode::InvalidValue)
-  {
-    flattenBVH(output, inputs, node.rightChild, lastSibling, indicesOffset, nodeOffset);
-  }
+    void
+    flatten(
+      const BVH::NodeList& inputs,
+      Mesh::IndexType inputIndex,
+      Mesh::IndexType missIndex
+    )
+    {
+      const BVHNode& node = inputs[inputIndex];
 
-  if (node.isLeaf())
-  {
-    resultNode.primitiveStartIndex = indicesOffset + node.primitiveStartIndex;
-  }
+      m_output.insert(m_output.begin() + m_curr, BVHNodeGPU {
+        .primitiveStartIndex = BVHNode::InvalidValue,
+        .max = node.aabb.max,
+        .min = node.aabb.min,
+        .nextNodeIndex = BVHNode::InvalidValue,
+        .oldIndex = inputIndex
+      });
+      auto& resultNode = m_output.back();
+      m_curr++;
 
-  resultNode.nextNodeIndex = lastSibling;
-}
+      if (node.leftChild != BVHNode::InvalidValue)
+      {
+        const auto& leftChild = inputs[node.leftChild];
+        auto childMissIndex = leftChild.forestSize + count() + 1;
+        flatten(inputs, node.leftChild, childMissIndex);
+      }
+      if (node.rightChild != BVHNode::InvalidValue)
+      {
+        flatten(inputs, node.rightChild, missIndex);
+      }
+      if (node.isLeaf())
+      {
+        resultNode.primitiveStartIndex = getRelativePrimitiveIndex(node.primitiveStartIndex);
+      }
+      resultNode.nextNodeIndex = missIndex != BVHNode::InvalidValue ?
+        getRelativeIndex(missIndex)
+        : BVHNode::InvalidValue;
+    }
+
+  private:
+
+    inline Mesh::IndexType
+    getRelativeIndex(Mesh::IndexType index)
+    {
+      return m_start + index;
+    }
+
+    inline Mesh::IndexType
+    getRelativePrimitiveIndex(Mesh::IndexType index)
+    {
+      return m_primitiveIndexStart + index;
+    }
+
+    inline Mesh::IndexType
+    count() { return m_curr - m_start; }
+
+  private:
+
+    BVHNodeGPU::NodeList& m_output;
+    Mesh::IndexType m_start;
+    Mesh::IndexType m_end;
+    Mesh::IndexType m_curr;
+    Mesh::IndexType m_primitiveIndexStart;
+
+};
 
 }
 
@@ -120,6 +165,7 @@ Scene::addMeshes(const std::vector<Mesh::MeshPtr>& meshes)
   return *this;
 }
 
+// TODO: store begin / end of each BVH in the flattened structure?
 void
 Scene::build()
 {
@@ -167,23 +213,20 @@ Scene::build()
     m_indices.insert(m_indices.begin() + startIndices, indices.begin(), indices.end());
     m_vertices.insert(m_vertices.begin() + startVertices, vertices.begin(), vertices.end());
 
-    std::vector<BVHNodeGPU>::iterator start = m_nodes.begin();
-    flattenBVH(
+    auto flattenTask = FlattenTask(
       m_nodes,
-      bvh.nodes,
-      bvh.rootIndex,
-      BVHNode::InvalidValue,
-      startIndices,
-      startNodes
+      startNodes,
+      startNodes + bvh.nodes.size(),
+      startIndices
     );
-    m_nodes.back().nextNodeIndex = BVHNode::InvalidValue;
+    flattenTask.flatten(bvh.nodes, bvh.rootIndex);
 
     startIndices += indices.size();
     startVertices += vertices.size();
     startNodes += bvh.nodes.size();
   }
 
-  // #DEBUG
+  #if 0
   for (size_t i = 0; i < m_nodes.size(); ++i)
   {
     const auto& node = m_nodes[i];
@@ -193,7 +236,7 @@ Scene::build()
     std::cout << " Max(" << glm::to_string(node.max) << ")" << std::endl;
     std::cout << " Next -> " << node.nextNodeIndex << std::endl;
   }
-  // #ENDDEBUG
+  #endif
 }
 
 } // namespace albedo

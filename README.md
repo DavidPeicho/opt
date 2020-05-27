@@ -10,6 +10,8 @@ How to do that with only one BVH when the user asks?
 
 ## TOOD
 
+* Add assert for max index (32bits unsigned number), so no more than 2^32 - 1
+indices allowed
 * Adds tinygltf as a cmake dependency. Adds the loader as an optional .so
 
 
@@ -18,3 +20,4 @@ How to do that with only one BVH when the user asks?
 ### BVH
 
 * http://www.sci.utah.edu/~wald/Publications/2007/ParallelBVHBuild/fastbuild.pdf
+* https://www.ci.i.u-tokyo.ac.jp/~hachisuka/tdf2015.pdf

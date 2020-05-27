@@ -107,7 +107,7 @@ recursiveBuild(
   nodes.emplace_back(BVHNode{});
 
   auto& node = nodes[nodeIndex];
-  node.primitiveIndex = BVHNode::InternalNodeMask;
+  node.primitiveStartIndex = BVHNode::InternalNodeMask;
   node.aabb = box;
   node.center = box.center();
 
@@ -159,11 +159,11 @@ recursiveBuild(
   node.rightChild = rightChild;
   if (leftChild != BVHNode::InternalNodeMask)
   {
-    node.subtreeSize += 1 + nodes[leftChild].subtreeSize;
+    node.forestSize += 1 + nodes[leftChild].forestSize;
   }
   if (rightChild != BVHNode::InternalNodeMask)
   {
-    node.subtreeSize += 1 + nodes[rightChild].subtreeSize;
+    node.forestSize += 1 + nodes[rightChild].forestSize;
   }
 
   return nodeIndex;
@@ -215,7 +215,7 @@ SAHBuilder<BinCount>::build(const Mesh& mesh)
 
   auto rootIndex = recursiveBuild<BinCount>(nodes, m_bins, 0, nodes.size());
 
-  // #DEBUG
+  #if 0
   std::cout << "Root = " << rootIndex << std::endl;
   for (size_t i = 0; i < nodes.size(); ++i)
   {
@@ -228,7 +228,7 @@ SAHBuilder<BinCount>::build(const Mesh& mesh)
     std::cout << i << " -> " << n.leftChild << std::endl;
     std::cout << i << " -> " << n.rightChild << std::endl;
   }
-  // #ENDDEBUG
+  #endif
 
   m_bvh.nodes = std::move(nodes);
   m_bvh.rootIndex = rootIndex;

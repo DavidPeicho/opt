@@ -22,6 +22,10 @@ class Buffer
     void
     create(WGPUDeviceId deviceId);
 
+    // TODO: implement a `View` type to represent pointer + len?
+    void
+    create(WGPUDeviceId deviceId, const T* const data, size_t count);
+
     inline void
     setUsage(WGPUBufferUsage usage) { m_descriptor.usage = usage; }
 
