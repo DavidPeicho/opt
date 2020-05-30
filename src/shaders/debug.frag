@@ -1,5 +1,8 @@
 #version 450
 
+#define EPSILON 0.000001
+#define EPSILON1 1.000001
+
 #define PI_F 3.14159265359
 #define TO_RAD_F (PI_F / 180.0)
 #define MAX_FLOAT 3.402823466e+38
@@ -83,9 +86,9 @@ intersectTriangle(Ray ray, uint startIndex, inout Intersection intersection)
 {
   // TODO: pre-process edge?
   // Maybe not really useful if decide to add skinning in shader.
-  vec3 v0 = vertices[startIndex].position;
-  vec3 v1 = vertices[startIndex + 1].position;
-  vec3 v2 = vertices[startIndex + 2].position;
+  vec3 v0 = vertices[indices[startIndex]].position;
+  vec3 v1 = vertices[indices[startIndex + 1]].position;
+  vec3 v2 = vertices[indices[startIndex + 2]].position;
 
   vec3 e1 = v1 - v0;
   vec3 e2 = v2 - v0;
@@ -94,7 +97,8 @@ intersectTriangle(Ray ray, uint startIndex, inout Intersection intersection)
   float det = dot(e1, p);
 
   // Ray is parralel to edge.
-  if (abs(det) < 0.0000000001) { return false; }
+  // if (det <= - 0.000000001) { return false; }
+  if (abs(det) < EPSILON) { return false; }
 
   float invDet = 1.0 / det;
 
@@ -102,11 +106,15 @@ intersectTriangle(Ray ray, uint startIndex, inout Intersection intersection)
   vec3 centered = ray.origin - v0;
 
   float u = dot(centered, p) * invDet;
-  if (u < 0 || u > 1) { return false; }
+  if (u < EPSILON || u > EPSILON1) {
+    return false;
+  }
 
   vec3 q = cross(centered, e1);
   float v = dot(ray.dir, q) * invDet;
-  if (v < 0 || u + v > 1) { return false; }
+  if (v < EPSILON || u + v > EPSILON1) {
+    return false;
+  }
 
   intersection.dist = dot(e2, q) * invDet;
   intersection.uv = vec2(u, v);
@@ -138,7 +146,7 @@ intersectAABB(Ray ray, vec3 aabbMin, vec3 aabbMax)
 void main()
 {
   Ray ray = generateRay();
-  ray.origin.z = 2.0;
+  ray.origin.z = 4.0;
 
   vec4 color = vec4(0.0, 0.0, 0.0, 0.0);
 
@@ -149,9 +157,8 @@ void main()
   intersection.dist = MAX_FLOAT;
 
   bool inter = false;
-
-  float minDistance = 0xFFFFFFFF;
   uint nextIndex = 0;
+
   while (nextIndex != 0xFFFFFFFF)
   {
     BVHNode node = nodes[nextIndex];
@@ -161,12 +168,10 @@ void main()
     {
       if (intersectTriangle(ray, node.primitiveStartIndex, tmpIntersection))
       {
-        if (tmpIntersection.dist <= intersection.dist)
+        if (tmpIntersection.dist < intersection.dist)
         {
-          inter = true;
           intersection = tmpIntersection;
         }
-        break;
       }
       nextIndex = node.nextNodeIndex;
     }
@@ -181,13 +186,8 @@ void main()
   }
 
   outColor = vec4(vec3(0.0), 1.0);
-  if (intersection.dist < MAX_FLOAT) {
-    outColor = vec4(vec3(intersection.dist), 1.0);
-  }
-  if (inter) {
-    // outColor = vec4(1.0, 0.0, 0.0, 1.0);
-    float f = dot(normalize(vec3(1.0, -1.0, 1.0)), intersection.normal);
-    outColor = vec4(f, f, f, 1.0);
-  }
 
+  if (intersection.dist < MAX_FLOAT) {
+    outColor = vec4(- intersection.normal, 1.0);
+  }
 }

@@ -228,15 +228,23 @@ Scene::build()
     startNodes += bvh.nodes.size();
   }
 
-  std::cout << m_indices[0] << std::endl;
-  std::cout << m_indices[1] << std::endl;
-  std::cout << m_indices[2] << std::endl;
-  std::cout << m_indices[3] << std::endl;
+  #if 0
+  for (size_t i = 0; i < m_indices.size(); i += 3)
+  {
+    const auto& v0 = m_vertices[m_indices[i]].position;
+    const auto& v1 = m_vertices[m_indices[i + 1]].position;
+    const auto& v2 = m_vertices[m_indices[i + 2]].position;
+    std::cout << glm::to_string(v0) << glm::to_string(v1) << glm::to_string(v2) << std::endl;
+  }
+  #endif
 
-  std::cout << glm::to_string(m_vertices[0].position) << std::endl;
-  std::cout << glm::to_string(m_vertices[1].position) << std::endl;
-  std::cout << glm::to_string(m_vertices[2].position) << std::endl;
-  std::cout << glm::to_string(m_vertices[3].position) << std::endl;
+  #if 0
+  for (const auto& node: m_nodes) {
+    if (node.primitiveStartIndex != 0xFFFFFFFF) {
+      std::cout << node.primitiveStartIndex << std::endl;
+    }
+  }
+  #endif
 
   #if 0
   for (size_t i = 0; i < m_nodes.size(); ++i)

@@ -69,6 +69,7 @@ GLTFLoader::load(const std::string& path)
 
   tinygltf::TinyGLTF loader;
 
+  // if (loader.LoadASCIIFromFile(&model, &err, &warn, path))
   if (!loader.LoadBinaryFromFile(&model, &err, &warn, path))
   {
     std::cout << "Failed to load" << std::endl;
