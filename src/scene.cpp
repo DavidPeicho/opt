@@ -1,5 +1,7 @@
 #include <algorithm>
 
+#include <glm/gtx/string_cast.hpp>
+
 #include <albedo/scene.h>
 #include <albedo/accel/bvh-sah-builder.h>
 
@@ -217,7 +219,7 @@ Scene::build()
       m_nodes,
       startNodes,
       startNodes + bvh.nodes.size(),
-      startIndices
+      startVertices
     );
     flattenTask.flatten(bvh.nodes, bvh.rootIndex);
 
@@ -226,7 +228,17 @@ Scene::build()
     startNodes += bvh.nodes.size();
   }
 
-  #if 1
+  std::cout << m_indices[0] << std::endl;
+  std::cout << m_indices[1] << std::endl;
+  std::cout << m_indices[2] << std::endl;
+  std::cout << m_indices[3] << std::endl;
+
+  std::cout << glm::to_string(m_vertices[0].position) << std::endl;
+  std::cout << glm::to_string(m_vertices[1].position) << std::endl;
+  std::cout << glm::to_string(m_vertices[2].position) << std::endl;
+  std::cout << glm::to_string(m_vertices[3].position) << std::endl;
+
+  #if 0
   for (size_t i = 0; i < m_nodes.size(); ++i)
   {
     const auto& node = m_nodes[i];

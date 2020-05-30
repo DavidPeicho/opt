@@ -2,11 +2,18 @@
 
 #define PI_F 3.14159265359
 #define TO_RAD_F (PI_F / 180.0)
+#define MAX_FLOAT 3.402823466e+38
 
 // TODO: move to intersection pass.
 struct Ray {
   vec3 origin;
   vec3 dir;
+};
+
+struct Intersection {
+  float dist;
+  vec2 uv;
+  vec3 normal;
 };
 
 struct BVHNode
@@ -17,6 +24,12 @@ struct BVHNode
   uint primitiveStartIndex;
 };
 
+struct Vertex
+{
+  vec3 position;
+  uint padding_0;
+};
+
 layout (binding = 0) uniform RenderSettingsBuffer {
   uint width;
   uint height;
@@ -24,6 +37,14 @@ layout (binding = 0) uniform RenderSettingsBuffer {
 
 layout (set = 0, binding = 1, std430) readonly buffer BVHNodeBuffer {
   BVHNode nodes[];
+};
+
+layout (set = 0, binding = 2, std430) readonly buffer IndexBuffer {
+  uint indices[];
+};
+
+layout (set = 0, binding = 3, std430) readonly buffer VertexBuffer {
+  Vertex vertices[];
 };
 
 layout(location = 0) out vec4 outColor;
@@ -42,7 +63,8 @@ generateRay()
 
   // TODO: use inverse projection matrix here instead.
 
-  ray.origin.z = - 5.0;
+  ray.origin = vec3(0.0, 0.0, 0.0);
+
   ray.dir.x = gl_FragCoord.x - half_w;
   ray.dir.y = RenderSettings.height - gl_FragCoord.y - half_h;
   ray.dir.z = - dist;
@@ -51,29 +73,121 @@ generateRay()
   return ray;
 }
 
+// TODO: implement watertight version of Ray-Triangle intersection, available
+// behind a flag
+
+// Implementation of:
+// Möller, Tomas; Trumbore, Ben (1997). "Fast, Minimum Storage Ray-Triangle Intersection"
+bool
+intersectTriangle(Ray ray, uint startIndex, inout Intersection intersection)
+{
+  // TODO: pre-process edge?
+  // Maybe not really useful if decide to add skinning in shader.
+  vec3 v0 = vertices[startIndex].position;
+  vec3 v1 = vertices[startIndex + 1].position;
+  vec3 v2 = vertices[startIndex + 2].position;
+
+  vec3 e1 = v1 - v0;
+  vec3 e2 = v2 - v0;
+
+  vec3 p = cross(ray.dir, e2);
+  float det = dot(e1, p);
+
+  // Ray is parralel to edge.
+  if (abs(det) < 0.0000000001) { return false; }
+
+  float invDet = 1.0 / det;
+
+  // Computes Barycentric coordinates.
+  vec3 centered = ray.origin - v0;
+
+  float u = dot(centered, p) * invDet;
+  if (u < 0 || u > 1) { return false; }
+
+  vec3 q = cross(centered, e1);
+  float v = dot(ray.dir, q) * invDet;
+  if (v < 0 || u + v > 1) { return false; }
+
+  intersection.dist = dot(e2, q) * invDet;
+  intersection.uv = vec2(u, v);
+  intersection.normal = - cross(e1, e2); // TODO: replace by interpolated normal
+  return true;
+}
+
+bool
+intersectAABB(Ray ray, vec3 aabbMin, vec3 aabbMax)
+{
+  // Ray is assumed to be in local coordinates, ie:
+  // ray = inverse(objectMatrix * invCameraMatrix) * ray
+
+  // Equation of ray: O + D * t
+
+  vec3 invRay = 1.0 / ray.dir;
+  vec3 tbottom = invRay * (aabbMin - ray.origin);
+  vec3 ttop = invRay * (aabbMax - ray.origin);
+
+  vec3 tmin = min(ttop, tbottom);
+  vec3 tmax = max(ttop, tbottom);
+
+  float largestMin = max(max(tmin.x, tmin.y), max(tmin.x, tmin.z));
+  float smallestMax = min(min(tmax.x, tmax.y), min(tmax.x, tmax.z));
+
+  return smallestMax > largestMin;
+}
+
 void main()
 {
-  Ray r = generateRay();
+  Ray ray = generateRay();
+  ray.origin.z = 2.0;
+
+  vec4 color = vec4(0.0, 0.0, 0.0, 0.0);
+
+  Intersection tmpIntersection;
+  tmpIntersection.dist = -1.0;
+
+  Intersection intersection;
+  intersection.dist = MAX_FLOAT;
+
+  bool inter = false;
 
   float minDistance = 0xFFFFFFFF;
-
   uint nextIndex = 0;
   while (nextIndex != 0xFFFFFFFF)
   {
-    BVHNodeBuffer node = nodes[nextIndex];
+    BVHNode node = nodes[nextIndex];
+
     // Node is a leaf.
     if (node.primitiveStartIndex != 0xFFFFFFFF)
     {
-      nextIndex = node.nextIndex;
+      if (intersectTriangle(ray, node.primitiveStartIndex, tmpIntersection))
+      {
+        if (tmpIntersection.dist <= intersection.dist)
+        {
+          inter = true;
+          intersection = tmpIntersection;
+        }
+        break;
+      }
+      nextIndex = node.nextNodeIndex;
     }
-    else if ()
+    else if (!intersectAABB(ray, node.min, node.max))
     {
-      
+      nextIndex = node.nextNodeIndex;
     }
     else
     {
       nextIndex++;
     }
+  }
+
+  outColor = vec4(vec3(0.0), 1.0);
+  if (intersection.dist < MAX_FLOAT) {
+    outColor = vec4(vec3(intersection.dist), 1.0);
+  }
+  if (inter) {
+    // outColor = vec4(1.0, 0.0, 0.0, 1.0);
+    float f = dot(normalize(vec3(1.0, -1.0, 1.0)), intersection.normal);
+    outColor = vec4(f, f, f, 1.0);
   }
 
 }

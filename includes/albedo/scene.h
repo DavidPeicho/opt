@@ -40,16 +40,6 @@ struct Renderable
   uint32_t materialIndex;
 };
 
-struct VertexGPU
-{
-  VertexGPU(const Vertex& vertex)
-    : position{vertex.position}
-  { }
-
-  glm::vec3 position;
-  uint32_t padding0;
-};
-
 // TODO: Separate leaf from internal nodes.
 struct BVHNodeGPU
 {

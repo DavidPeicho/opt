@@ -39,6 +39,14 @@ Buffer<T>::create(WGPUDeviceId deviceId)
 
 template <typename T>
 void
+Buffer<T>::create(WGPUDeviceId deviceId, const std::vector<T>& data)
+{
+  // TODO: error checking **only** in debug mode.
+  create(deviceId, &data[0], data.size());
+}
+
+template <typename T>
+void
 Buffer<T>::create(WGPUDeviceId deviceId, const T* const data, size_t count)
 {
   // TODO: destroy previous

@@ -13,7 +13,7 @@ namespace albedo
 struct Vertex
 {
   glm::vec3 position;
-  glm::vec3 normal;
+  uint32_t padding_0; // For GPU
   // TODO: add UV
 };
 

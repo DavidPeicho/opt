@@ -25,6 +25,11 @@ class Buffer
     void
     create(WGPUDeviceId deviceId);
 
+    // TODO: use a trait to accept all object that can index contiguous
+    // elements: (vector, array, etc...)
+    void
+    create(WGPUDeviceId deviceId, const std::vector<T>& data);
+
     // TODO: implement a `View` type to represent pointer + len?
     void
     create(WGPUDeviceId deviceId, const T* const data, size_t count);
