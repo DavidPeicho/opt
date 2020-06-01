@@ -25,7 +25,7 @@ namespace
 struct Transform
 {
   glm::mat4 modelToLocal;
-  glm::mat4 localToWorld;
+  Mesh::IndexType parentIndex;
 };
 
 struct InstanceData
@@ -33,11 +33,37 @@ struct InstanceData
   std::string name;
 };
 
+
 struct Renderable
 {
-  glm::mat4 modelToWorld;
-  uint32_t bvhRootIndex;
-  uint32_t materialIndex;
+  Mesh::IndexType meshIndex;
+  Mesh::IndexType materialIndex;
+};
+
+// TODO: move out of Scene.
+// TODO: improve this class API. Right now it wraps stuff without much reasons,
+// even though it does memoization of start indices.
+template <class T>
+struct EntryOffsetTable
+{
+  inline void
+  push(const std::vector<T>& entry)
+  {
+    auto start = data.size();
+    data.insert(data.end(), entry.begin(), entry.end());
+    entries.push_back(start);
+  }
+
+  inline void
+  clear()
+  {
+    data.clear();
+    entries.clear();
+  }
+
+  std::vector<T> data;
+  std::vector<uint32_t> entries;
+
 };
 
 // TODO: Separate leaf from internal nodes.
@@ -49,6 +75,13 @@ struct BVHNodeGPU
   uint32_t nextNodeIndex;
   glm::vec3 max;
   uint32_t primitiveStartIndex;
+};
+
+struct InstanceGPU
+{
+  glm::mat4 modelToWorld;
+  uint32_t bvhRootIndex;
+  uint32_t materialIndex;
 };
 
 // TODO: template over `InstanceData` to accept extending that.
@@ -94,6 +127,9 @@ class Scene
     Scene&
     deleteRenderable(Instance instance);
 
+    Scene&
+    update();
+
     void
     build(); // TODO: improve this unclear API point.
 
@@ -110,9 +146,11 @@ class Scene
     ComponentArray<Material> m_materials;
 
     std::vector<Mesh::MeshPtr> m_meshes;
-    std::vector<Vertex> m_vertices; // Vertices of **all** BVH.
-    Mesh::IndexBuffer m_indices; // Indices of **all** BVH.
-    std::vector<BVHNodeGPU> m_nodes; // Nodes of all BVH.
+    std::vector<InstanceGPU> m_instances;
+
+    EntryOffsetTable<Vertex> m_vertices; // Vertices of **all** BVH.
+    EntryOffsetTable<Mesh::IndexType> m_indices; // Indices of **all** BVH.
+    EntryOffsetTable<BVHNodeGPU> m_nodes; // Nodes of all BVH.
 };
 
 template <typename T>

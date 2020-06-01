@@ -24,7 +24,7 @@ class Mesh
 
     using MeshPtr = std::shared_ptr<Mesh>;
 
-    using IndexType = uint32_t;
+    using IndexType = uint32_t; // TODO: move out of Mesh class
     using VertexBuffer = std::vector<Vertex>;
     using IndexBuffer = std::vector<IndexType>;
 

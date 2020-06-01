@@ -44,6 +44,9 @@ namespace albedo
       inline const std::vector<T>&
       all() const { return m_data; }
 
+      inline const std::vector<Instance>&
+      instances() const { return m_instances; }
+
     private:
 
       std::unordered_map<Instance, Instance::Size, InstanceHash> m_entityToIndex;

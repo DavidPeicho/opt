@@ -19,17 +19,18 @@ class FlattenTask {
 
     inline
     FlattenTask(
-      BVHNodeGPU::NodeList& output,
-      Mesh::IndexType start,
-      Mesh::IndexType end,
+      EntryOffsetTable<BVHNodeGPU>& output,
       Mesh::IndexType primitiveIndexStart
     )
       : m_output{output}
-      , m_start(start)
-      , m_end(end)
-      , m_curr(start)
+      , m_start(output.data.size())
+      , m_curr(m_start)
       , m_primitiveIndexStart(primitiveIndexStart)
-    { }
+    {
+      // TODO: not super clean... We don't really know who manages what with
+      // this EntryOffsetClass. To refactor.
+      m_output.entries.push_back(m_curr);
+    }
 
   public:
 
@@ -48,14 +49,14 @@ class FlattenTask {
     {
       const BVHNode& node = inputs[inputIndex];
 
-      m_output.insert(m_output.begin() + m_curr, BVHNodeGPU {
+      m_output.data.insert(m_output.data.begin() + m_curr, BVHNodeGPU {
         .min = node.aabb.min,
         .max = node.aabb.max,
         .nextNodeIndex = BVHNode::InvalidValue,
         .primitiveStartIndex = BVHNode::InvalidValue
         // .oldIndex = inputIndex
       });
-      auto& resultNode = m_output.back();
+      auto& resultNode = m_output.data[m_curr];
       m_curr++;
 
       if (node.leftChild != BVHNode::InvalidValue)
@@ -96,9 +97,8 @@ class FlattenTask {
 
   private:
 
-    BVHNodeGPU::NodeList& m_output;
+    EntryOffsetTable<BVHNodeGPU>& m_output;
     Mesh::IndexType m_start;
-    Mesh::IndexType m_end;
     Mesh::IndexType m_curr;
     Mesh::IndexType m_primitiveIndexStart;
 
@@ -124,22 +124,14 @@ Scene::deleteInstance(Instance instance)
 
 // TODO: expose a renderable manager directly.
 // TODO: improve API by letting user set the instanc with the mesh?
+// TODO: not great API here, because the BVH **has** to be built before calling this method.
 Scene&
 Scene::addRenderable(Instance instance, size_t meshIndex)
 {
   Renderable r;
-
-  // TODO: cache the offset computation?
-  uint32_t BVHRootOffset = 0;
-  for (size_t i = 0; i < meshIndex; ++i)
-  {
-    BVHRootOffset += m_meshes[i]->getBVH().nodes.size();
-  }
-
-  r.bvhRootIndex = BVHRootOffset;
+  r.bvhRootIndex = m_nodes.entries[meshIndex];
   r.materialIndex = 0;
   m_renderables.add(instance, std::move(r));
-
   return *this;
 }
 
@@ -195,15 +187,12 @@ Scene::build()
   // the indices, vertices, and nodes array
 
   m_vertices.clear();
-  m_vertices.reserve(totalNumberVertices);
+  m_vertices.data.reserve(totalNumberVertices);
   m_indices.clear();
-  m_indices.reserve(totalNumberIndices);
+  m_indices.data.reserve(totalNumberIndices);
   m_nodes.clear();
-  m_nodes.reserve(totalNumberNodes);
+  m_nodes.data.reserve(totalNumberNodes);
 
-  Mesh::IndexType startIndices = 0;
-  Mesh::IndexType startVertices = 0;
-  Mesh::IndexType startNodes = 0;
   // TODO: parralele for.
   for (size_t i = 0; i < m_meshes.size(); ++i)
   {
@@ -212,20 +201,14 @@ Scene::build()
     const auto& indices = mesh.getIndices();
     const auto& vertices = mesh.getVertexBuffer();
 
-    m_indices.insert(m_indices.begin() + startIndices, indices.begin(), indices.end());
-    m_vertices.insert(m_vertices.begin() + startVertices, vertices.begin(), vertices.end());
+    m_indices.push(indices);
+    m_vertices.push(vertices);
 
     auto flattenTask = FlattenTask(
       m_nodes,
-      startNodes,
-      startNodes + bvh.nodes.size(),
-      startVertices
+      m_vertices.entries[i]
     );
     flattenTask.flatten(bvh.nodes, bvh.rootIndex);
-
-    startIndices += indices.size();
-    startVertices += vertices.size();
-    startNodes += bvh.nodes.size();
   }
 
   #if 0
@@ -257,6 +240,28 @@ Scene::build()
     std::cout << " Next -> " << node.nextNodeIndex << std::endl;
   }
   #endif
+}
+
+Scene&
+Scene::update()
+{
+  // TODO: update only when dirty.
+
+  const auto& renderableData = m_renderables.all();
+  const auto& renderableInstances = m_renderables.instances();
+  m_instances.reserve(renderableInstances.capacity());
+  for (size_t i = 0; i < renderableInstances.size(); ++i)
+  {
+    const auto& instance = renderableInstances[i];
+    const auto& renderable = renderableData[i];
+    auto& gpuInstance = m_instances[i];
+
+    gpuInstance.bvhRootIndex = m_nodes.entries[renderable.meshIndex];
+    gpuInstance.materialIndex = renderable.materialIndex;
+    // instance.modelToWorld = 
+  }
+
+  return *this;
 }
 
 } // namespace albedo
