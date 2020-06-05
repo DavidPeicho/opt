@@ -1,24 +1,24 @@
 namespace albedo
 {
 
-template <typename T>
-void
-ComponentArray<T>::add(Instance instance, T&& data)
+template <class Instance, class DataType>
+Instance
+ComponentArray<Instance, DataType>::createComponent(Entity entity, T&& data)
 {
-  auto instanceIt = m_entityToIndex.find(instance);
+  auto instanceIt = m_entityToIndex.find(entity);
   if (instanceIt != m_entityToIndex.end())
   {
-    remove(instance);
+    removeComponent(entity);
   }
-  Instance::Size index = m_instances.size();
+  auto index = m_instances.size();
   m_instances.push_back(instance);
   m_data.emplace_back(std::move(data));
   m_entityToIndex[instance] = index;
 }
 
-template <typename T>
+template <class Instance, class DataType>
 void
-ComponentArray<T>::remove(Instance instance)
+ComponentArray<Instance, DataType>::removeComponent(Instance instance)
 {
   // TODO: either make this function thread safe, or ask the user to make a
   // thread safe call.
@@ -46,6 +46,39 @@ ComponentArray<T>::remove(Instance instance)
   // the previous last element.
   m_entityToIndex.erase(instanceIt);
   if (instance != lastInstance) { m_entityToIndex[lastInstance] = dataIndex; }
+}
+
+template <class Instance, class DataType>
+bool
+ComponentArray<Instance, DataType>::hasComponent(const Entity& entity)
+{
+  return m_entityToIndex.find(entity) != m_entityToIndex.end();
+}
+
+template <class Instance, class DataType>
+std::optional<Instance>
+ComponentArray<Instance, DataType>::getComponent(const Entity& entity)
+{
+  auto instanceIt = m_entityToIndex.find(entity);
+  if (instanceIt != m_entityToIndex.end())
+  {
+    return *instanceIt;
+  }
+  return std::nullopt;
+}
+
+template <class Instance, class DataType>
+DataType&
+ComponentArray<Instance, DataType>::data(Instance instance)
+{
+  return m_data[instance];
+}
+
+template <class Instance, class DataType>
+const DataType&
+ComponentArray<Instance, DataType>::data(Instance) const
+{
+  return m_data[instance];
 }
 
 }

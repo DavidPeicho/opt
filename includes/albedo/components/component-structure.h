@@ -1,59 +1,74 @@
 #pragma once
 
+#include <optional>
 #include <unordered_set>
 #include <vector>
 
-#include <albedo/instance.h>
+#include <albedo/entity.h>
+#include <albedo/utils/identifier.h>
 
 namespace albedo
 {
 
-  struct InstanceHash {
+struct EntityHash
+{
 
-    size_t
-    operator()(const Instance& i) const
+  size_t
+  operator()(const Entity& i) const
+  {
+      return i.getId();
+  }
+
+};
+
+// TODO: use a structure of array here instead.
+template <typename Instance, typename DataType>
+class ComponentArray
+{
+  public:
+
+    Instance
+    createComponent(Entity entity, T&& data);
+
+    void
+    removeComponent(Instance instance);
+
+    bool
+    hasComponent(const Entity& entity);
+
+    std::optional<Instance>
+    getComponent(const Entity& entity);
+
+    inline DataType&
+    data(const Instance& component);
+
+    inline const DataType&
+    data(const Instance& ComponentInstance) const;
+
+    inline OptionalRef<T>
+    getComponentData(Instance instance)
     {
-        return i.getId();
+      auto pos = m_entityToIndex.find(instance);
+      if (pos != m_entityToIndex.end())
+      {
+        return OptionalRef{m_data[pos->second]};
+      }
+      return OptionalRef{};
     }
 
-  };
+    inline const std::vector<T>&
+    all() const { return m_data; }
 
-  // TODO: use a structure of array here instead.
-  template <typename T>
-  class ComponentArray
-  {
-    public:
+    inline const std::vector<Instance>&
+    instances() const { return m_instances; }
 
-      void
-      add(Instance instance, T&& data);
+  private:
 
-      void
-      remove(Instance instance);
+    std::unordered_map<Entity, Identifier::Size, EntityHash> m_entityToIndex;
+    std::vector<Instance> m_instances;
+    std::vector<DataType> m_data;
 
-      inline std::optional<std::reference_wrapper<T>>
-      data(Instance instance)
-      {
-        auto pos = m_entityToIndex.find(instance);
-        if (pos != m_entityToIndex.end())
-        {
-          return m_data[pos->second];
-        }
-        return std::nullopt;
-      }
-
-      inline const std::vector<T>&
-      all() const { return m_data; }
-
-      inline const std::vector<Instance>&
-      instances() const { return m_instances; }
-
-    private:
-
-      std::unordered_map<Instance, Instance::Size, InstanceHash> m_entityToIndex;
-      std::vector<Instance> m_instances;
-      std::vector<T> m_data;
-
-  };
+};
 
 }
 

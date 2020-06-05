@@ -244,6 +244,7 @@ Scene&
 Scene::update()
 {
   // TODO: update only when dirty.
+  m_transformManager.computeWorldTransforms();
 
   const auto& renderableData = m_renderables.all();
   const auto& renderableInstances = m_renderables.instances();
@@ -254,9 +255,14 @@ Scene::update()
     const auto& renderable = renderableData[i];
     auto& gpuInstance = m_instances[i];
 
+    // TODO: adding the bvhRoot on each update shouldn't be needed.
     gpuInstance.bvhRootIndex = m_nodes.entries[renderable.meshIndex];
     gpuInstance.materialIndex = renderable.materialIndex;
-    // instance.modelToWorld = 
+
+    if ()
+    {
+      gpuInstance.modelToWorld = 
+    }
   }
 
   return *this;
@@ -268,10 +274,10 @@ Scene::findByName(const std::string& name)
   std::vector<Instance> result;
   for (const auto& instance: m_data.instances())
   {
-    auto& data = m_data.data(instance).value().get();
+    auto& data = *m_data.data(instance);
     if (data.name == name) { result.push_back(instance); }
   }
-  return result
+  return result;
 }
 
 } // namespace albedo

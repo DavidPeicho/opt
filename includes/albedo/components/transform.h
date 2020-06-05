@@ -40,6 +40,8 @@ class TransformManager
     void
     computeWorldTransforms(Instance instance);
 
+  public:
+
   private:
 
     ComponentArray<Transform> m_components;

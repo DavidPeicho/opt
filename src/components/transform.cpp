@@ -28,19 +28,24 @@ TransformManager::computeWorldTransforms()
 void
 TransformManager::computeWorldTransforms(Instance instance)
 {
-  auto& data = m_components.data(instance);
+  auto& dataOpt = m_components.data(instance);
+  if (!dataOpt) { return; }
+
+  auto& data = *dataOpt;
   if (!data.isDirty) { return; }
 
   data.isDirty = false;
 
-  if (!data.parent)
+  // TODO: maybe the case where the parent data is none shouldnt happen,
+  // i.e: the parent isnt added yet to the list.
+  if (!data.parent || !m_components.data(data.parent))
   {
     data.localToWorld = data.modelToLocal;
     return;
   }
 
-  computeWorldTransforms(data.parent.value());
-  auto& parentData = m_components.data(data.parent.value());
+  computeWorldTransforms(data.parent);
+  auto& parentData = *m_components.data(data.parent);
   data.localToWorld = parentData.localToWorld * data.modelToLocal;
 }
 
