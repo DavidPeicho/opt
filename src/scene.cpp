@@ -110,7 +110,6 @@ Scene&
 Scene::addInstance(Instance instance, InstanceData&& data)
 {
   m_data.add(instance, std::move(data));
-  m_transforms.add(instance, Transform{});
   return *this;
 }
 
@@ -118,7 +117,6 @@ Scene&
 Scene::deleteInstance(Instance instance)
 {
   m_data.remove(instance);
-  m_transforms.remove(instance);
   return *this;
 }
 
@@ -262,6 +260,18 @@ Scene::update()
   }
 
   return *this;
+}
+
+std::vector<Instance>
+Scene::findByName(const std::string& name)
+{
+  std::vector<Instance> result;
+  for (const auto& instance: m_data.instances())
+  {
+    auto& data = m_data.data(instance).value().get();
+    if (data.name == name) { result.push_back(instance); }
+  }
+  return result
 }
 
 } // namespace albedo

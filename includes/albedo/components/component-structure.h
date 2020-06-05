@@ -18,6 +18,7 @@ namespace albedo
 
   };
 
+  // TODO: use a structure of array here instead.
   template <typename T>
   class ComponentArray
   {
@@ -29,7 +30,7 @@ namespace albedo
       void
       remove(Instance instance);
 
-      inline T&
+      inline std::optional<std::reference_wrapper<T>>
       data(Instance instance)
       {
         auto pos = m_entityToIndex.find(instance);
@@ -37,8 +38,7 @@ namespace albedo
         {
           return m_data[pos->second];
         }
-        // TODO: find a better way than throwin.
-        throw std::string("invalid instance");
+        return std::nullopt;
       }
 
       inline const std::vector<T>&

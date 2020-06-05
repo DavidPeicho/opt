@@ -9,6 +9,7 @@
 
 #include <glm/glm.hpp>
 #include <albedo/components/component-structure.h>
+#include <albedo/components/transform.h>
 #include <albedo/instance.h>
 #include <albedo/material.h>
 #include <albedo/mesh.h>
@@ -16,23 +17,18 @@
 namespace albedo
 {
 
+using TransformManager = components::TransformManager;
+
 namespace
 {
   template <typename T>
   struct FalseTrait : std::false_type {};
 }
 
-struct Transform
-{
-  glm::mat4 modelToLocal;
-  Mesh::IndexType parentIndex;
-};
-
 struct InstanceData
 {
   std::string name;
 };
-
 
 struct Renderable
 {
@@ -89,7 +85,6 @@ struct InstanceGPU
 // of the ResourceManager changes, we need to sync everything.
 class Scene
 {
-
   friend class Renderer;
 
   public:
@@ -135,15 +130,25 @@ class Scene
 
   public:
 
+    // TODO: add perfect forwarding to m_data, and put this method const.
+    std::vector<Instance>
+    findByName(const std::string& name);
+
+  public:
+
     template <typename T>
     T&
     data(Instance instance);
 
+    inline TransformManager&
+    getTransformManager() { return m_transformManager; }
+
   private:
     ComponentArray<InstanceData> m_data;
-    ComponentArray<Transform> m_transforms;
     ComponentArray<Renderable> m_renderables;
     ComponentArray<Material> m_materials;
+
+    TransformManager m_transformManager;
 
     std::vector<Mesh::MeshPtr> m_meshes;
     std::vector<InstanceGPU> m_instances;
@@ -163,10 +168,6 @@ Scene::data(Instance instance)
 template <>
 inline InstanceData&
 Scene::data<InstanceData>(Instance instance) { return m_data.data(instance); }
-
-template <>
-inline Transform&
-Scene::data<Transform>(Instance instance) { return m_transforms.data(instance); }
 
 template <>
 inline Renderable&

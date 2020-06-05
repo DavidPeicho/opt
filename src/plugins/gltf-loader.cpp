@@ -5,9 +5,11 @@
 
 #include <type_traits>
 
+#include <albedo/components/transform.h>
 #include <albedoloader/gltf-loader.h>
 
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/string_cast.hpp>
 
 namespace albedo
@@ -170,15 +172,34 @@ GLTFLoader::processNode(
 
   std::cout << "Processing node " << scene.data<InstanceData>(instance).name << std::endl;
 
+  Transform transform;
+
   // Process transform.
   if (node.matrix.size() != 0)
   {
-    scene.data<Transform>(instance).modelToLocal = std::move(glm::make_mat4(&node.matrix[0]));
+    transform.modelToLocal = std::move(glm::make_mat4(&node.matrix[0]));
   }
   else
   {
-    // TODO: handle pos + rot + scale.
+    const auto& t = node.translation;
+    const auto& r = node.rotation;
+    const auto& s = node.scale;
+
+    transform.modelToLocal = glm::translate(
+      glm::mat4(1.0),
+      t.size() > 0 ? glm::vec3(t[0], t[1], t[2]) : glm::vec3(0.0)
+    );
+    transform.modelToLocal = glm::rotate(
+      transform.modelToLocal,
+      r.size() > 0 ? glm::quat(r[3], r[0], r[1], r[2])
+    );
+    transform.modelToLocal = glm::scale(
+      transform.modelToLocal,
+      s.size() > 0 ? glm::vec3(s[0], s[1], s[2]) : glm::vec3(0.0)
+    );
   }
+
+  scene.getTransformManager().createComponent(instance, std::move(transform));
 
   if (node.mesh >= 0)
   {
