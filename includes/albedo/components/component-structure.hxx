@@ -1,9 +1,9 @@
 namespace albedo
 {
 
-template <class Instance, class DataType>
+template <class DataType>
 void
-ComponentArray<Instance, DataType>::createComponent(
+ComponentArray<DataType>::createComponent(
   const Entity& entity, DataType&& data
 )
 {
@@ -19,9 +19,9 @@ ComponentArray<Instance, DataType>::createComponent(
   m_entityToIndex[entity] = index;
 }
 
-template <class Instance, class DataType>
+template <class DataType>
 void
-ComponentArray<Instance, DataType>::removeComponent(const Entity& entity)
+ComponentArray<DataType>::removeComponent(const Entity& entity)
 {
   // TODO: either make this function thread safe, or ask the user to make a
   // thread safe call.
@@ -32,11 +32,11 @@ ComponentArray<Instance, DataType>::removeComponent(const Entity& entity)
     return;
   }
 
-  Instance index = indexIt->second;
+  auto index = indexIt->second;
 
   // Instance associated to the last data entry. This will be moved at the
   // position of the deleted instance.
-  Instance lastIndex = m_entities.size() - 1;
+  auto lastIndex = m_entities.size() - 1;
   Entity lastEntity = m_entities[lastIndex];
 
   // Move the last element of every array at the position pointed by the
@@ -52,16 +52,16 @@ ComponentArray<Instance, DataType>::removeComponent(const Entity& entity)
   if (index != lastIndex) { m_entityToIndex[lastEntity] = index; }
 }
 
-template <class Instance, class DataType>
+template <class DataType>
 bool
-ComponentArray<Instance, DataType>::hasComponent(const Entity& entity)
+ComponentArray<DataType>::hasComponent(const Entity& entity)
 {
   return m_entityToIndex.find(entity) != m_entityToIndex.end();
 }
 
-template <class Instance, class DataType>
+template <class DataType>
 OptionalRef<DataType>
-ComponentArray<Instance, DataType>::getComponentData(const Entity& entity)
+ComponentArray<DataType>::getComponentData(const Entity& entity)
 {
   auto instance = getComponent(entity);
   if (instance)
@@ -71,9 +71,9 @@ ComponentArray<Instance, DataType>::getComponentData(const Entity& entity)
   return std::nullopt;
 }
 
-template <class Instance, class DataType>
+template <class DataType>
 OptionalRef<const DataType>
-ComponentArray<Instance, DataType>::getComponentData(const Entity& entity) const
+ComponentArray<DataType>::getComponentData(const Entity& entity) const
 {
   auto instance = getComponent(entity);
   if (instance)
@@ -83,9 +83,9 @@ ComponentArray<Instance, DataType>::getComponentData(const Entity& entity) const
   return std::nullopt;
 }
 
-template <class Instance, class DataType>
-std::optional<Instance>
-ComponentArray<Instance, DataType>::getComponent(const Entity& entity) const
+template <class DataType>
+std::optional<typename DataType::Id>
+ComponentArray<DataType>::getComponent(const Entity& entity) const
 {
   auto instanceIt = m_entityToIndex.find(entity);
   if (instanceIt != m_entityToIndex.end())

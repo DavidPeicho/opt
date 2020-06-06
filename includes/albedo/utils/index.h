@@ -7,17 +7,21 @@
 namespace albedo
 {
 
+template <typename Tag>
 class Index {
 
   public:
 
-    using Type = std::size_t;
+    using Type = int;
 
   public:
 
-    explicit Index(Index::Type value) noexcept
+    Index(Index::Type value) noexcept
       : m_value(value)
     { }
+
+    Index() noexcept = default;
+
     Index(const Index& e) noexcept = default;
     Index(Index&& e) noexcept = default;
 
@@ -27,7 +31,7 @@ class Index {
     Index&
     operator=(Index&& e) noexcept = default;
 
-    size_t
+    Type
     operator()() const { return m_value; }
 
     constexpr operator Type() const noexcept { return m_value; }
@@ -41,12 +45,6 @@ class Index {
     bool
     operator<(Index e) const { return e.m_value < m_value; }
 
-    inline bool
-    isValid()
-    {
-      return m_value != std::numeric_limits<Index::Type>::max();
-    }
-
     // an id that can be used for debugging/printing
     inline Type
     getValue() const noexcept { return m_value; }
@@ -59,74 +57,86 @@ class Index {
 
 /* Overload comparisons of a `Index` object with `Index::Type`. */
 
+template <typename Tag>
 constexpr bool
-operator==(const Index& i, Index::Type rhs) noexcept
+operator==(const Index<Tag>& i, typename Index<Tag>::Type rhs) noexcept
 {
   return i.getValue() == rhs;
 }
 
+template <typename Tag>
 constexpr bool
-operator==(Index::Type lhs, const Index& i) noexcept
+operator==(typename Index<Tag>::Type lhs, const Index<Tag>& i) noexcept
 {
   return i.getValue() == lhs;
 }
 
+template <typename Tag>
 constexpr bool
-operator!=(const Index& i, Index::Type rhs) noexcept
+operator!=(const Index<Tag>& i, typename Index<Tag>::Type rhs) noexcept
 {
   return i.getValue() != rhs;
 }
 
+template <typename Tag>
 constexpr bool
-operator!=(Index::Type lhs, const Index& i) noexcept
+operator!=(typename Index<Tag>::Type lhs, const Index<Tag>& i) noexcept
 {
   return i.getValue() != lhs;
 }
 
+template <typename Tag>
 constexpr bool
-operator<(const Index& i, Index::Type rhs) noexcept
+operator<(const Index<Tag>& i, typename Index<Tag>::Type rhs) noexcept
 {
   return i.getValue() < rhs;
 }
 
+template <typename Tag>
 constexpr bool
-operator<(Index::Type lhs , const Index& i) noexcept
+operator<(typename Index<Tag>::Type lhs , const Index<Tag>& i) noexcept
 {
   return i.getValue() < lhs;
 }
 
+template <typename Tag>
 constexpr bool
-operator<=(const Index& i, Index::Type rhs) noexcept
+operator<=(const Index<Tag>& i, typename Index<Tag>::Type rhs) noexcept
 {
   return i.getValue() <= rhs;
 }
 
+template <typename Tag>
 constexpr bool
-operator<=(Index::Type lhs, const Index& i) noexcept
+operator<=(typename Index<Tag>::Type lhs, const Index<Tag>& i) noexcept
 {
   return i.getValue() <= lhs;
 }
 
+template <typename Tag>
 constexpr bool
-operator>(const Index& i, Index::Type rhs) noexcept
+operator>(const Index<Tag>& i, typename Index<Tag>::Type rhs) noexcept
 {
   return i.getValue() > rhs;
 }
 
+template <typename Tag>
 constexpr bool
-operator>(Index::Type lhs, const Index& i) noexcept
+operator>(typename Index<Tag>::Type lhs, const Index<Tag>& i) noexcept
 {
   return i.getValue() > lhs;
 }
 
+template <typename Tag>
 constexpr bool
-operator>=(const Index& i, Index::Type rhs) noexcept
+operator>=(const Index<Tag>& i, typename Index<Tag>::Type rhs) noexcept
 {
   return i.getValue() >= rhs;
 }
 
+template <typename Tag>
 constexpr bool
-operator>=(Index::Type lhs, const Index& i) noexcept
+operator>=(typename Index<Tag>::Type lhs, const Index<Tag>& i) noexcept
 {
   return i.getValue() >= lhs;
 }
@@ -134,7 +144,7 @@ operator>=(Index::Type lhs, const Index& i) noexcept
 // TODO: using a global counter like that isn't a good idea, as we may run
 // out of values in the future. A class managing alive / dead entities could
 // help with that.
-class GlobalIdentifier: public Index
+class GlobalIdentifier: public Index<GlobalIdentifier>
 {
 
   public:
@@ -146,7 +156,7 @@ class GlobalIdentifier: public Index
   private:
 
     // TODO: generate randomly instead.
-    static std::atomic<Index::Type> globalId;
+    static std::atomic<Index<GlobalIdentifier>::Type> globalId;
 
 };
 

@@ -24,7 +24,7 @@ struct EntityHash
 
 // TODO: use a structure of array here instead.
 // TODO: implement iterator functions
-template <typename Instance, typename DataType>
+template <typename DataType>
 class ComponentArray
 {
 
@@ -44,7 +44,7 @@ class ComponentArray
     bool
     hasComponent(const Entity& entity);
 
-    std::optional<Instance>
+    std::optional<typename DataType::Id>
     getComponent(const Entity& entity) const;
 
     OptionalRef<DataType>
@@ -61,7 +61,7 @@ class ComponentArray
 
   private:
 
-    std::unordered_map<Entity, Instance, EntityHash> m_entityToIndex;
+    std::unordered_map<Entity, typename DataType::Id, EntityHash> m_entityToIndex;
     EntityContainer m_entities;
     DataContainer m_data;
 

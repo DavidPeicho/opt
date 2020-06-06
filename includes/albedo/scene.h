@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <glm/glm.hpp>
+#include <albedo/components/component.h>
 #include <albedo/components/component-structure.h>
 #include <albedo/components/transform.h>
 #include <albedo/entity.h>
@@ -27,28 +28,12 @@ namespace
   struct FalseTrait : std::false_type {};
 }
 
-// TODO: move ID class into a ComponentData::using.
-class InstanceId: public Index
-{
-  public:
-
-    InstanceId(Index::Type value) noexcept : Index(value) { }
-};
-
-struct InstanceData
+struct InstanceData: public Component<InstanceData>
 {
   std::string name;
 };
 
-// TODO: move ID class into a ComponentData::using.
-class RenderableId: public Index
-{
-  public:
-
-    RenderableId(Index::Type value) noexcept : Index(value) { }
-};
-
-struct RenderableData
+struct Renderable: public Component<Renderable>
 {
   Mesh::IndexType meshIndex;
   Mesh::IndexType materialIndex;
@@ -156,8 +141,8 @@ class Scene
     getTransformManager() { return m_transformManager; }
 
   private:
-    ComponentArray<InstanceId, InstanceData> m_data;
-    ComponentArray<RenderableId, RenderableData> m_renderables;
+    ComponentArray<InstanceData> m_data;
+    ComponentArray<Renderable> m_renderables;
 
     TransformManager m_transformManager;
 
@@ -184,8 +169,8 @@ Scene::data<InstanceData>(const Entity& entity)
 }
 
 template <>
-inline OptionalRef<RenderableData>
-Scene::data<RenderableData>(const Entity& entity)
+inline OptionalRef<Renderable>
+Scene::data<Renderable>(const Entity& entity)
 {
   return m_renderables.getComponentData(entity);
 }
