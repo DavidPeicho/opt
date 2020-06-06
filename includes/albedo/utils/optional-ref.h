@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <utility>
 
 namespace albedo
 {
@@ -13,9 +14,10 @@ class OptionalRef
 
     // TODO: add perfect forwarding
 
-    OptionalRef() noexcept;
-
-    OptionalRef(T& value) noexcept;
+    template <typename U>
+    OptionalRef(U&& arg)
+      : m_ref{std::forward<U>(arg)}
+    { }
 
   public:
 

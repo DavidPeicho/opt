@@ -105,6 +105,7 @@ int main() {
 
   auto& scene = sceneOptional.value();
   scene.build();
+  scene.update();
 
   albedo::Renderer renderer(deviceId, gSurfaceId);
   renderer.init(scene);

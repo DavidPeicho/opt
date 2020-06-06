@@ -5,7 +5,6 @@
 
 #include <glm/glm.hpp>
 #include <albedo/accel/bvh.h>
-#include <albedo/instance.h>
 
 namespace albedo
 {

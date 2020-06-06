@@ -7,45 +7,59 @@ namespace components
 {
 
 TransformManager&
-TransformManager::createComponent(Instance instance)
+TransformManager::createComponent(const Entity& entity)
 {
-  createComponent(instance, Transform{ });
+  createComponent(instance, TransformData{ });
 }
 
 TransformManager&
-TransformManager::createComponent(Instance instance, Transform&& transform)
+TransformManager::createComponent(const Entity& entity, TransformData&& data)
 {
-  m_components.add(instance, std::move(transform));
+  m_components.add(entity, std::move(data));
 }
 
 void
 TransformManager::computeWorldTransforms()
 {
-  auto& entities = m_components.instances();
-  for (auto& entity: entities) { computeWorldTransforms(entity); }
+  auto& components = m_components.components();
+  for (auto& c: components) { computeWorldTransforms(c); }
 }
 
 void
-TransformManager::computeWorldTransforms(Instance instance)
+TransformManager::computeWorldTransforms(const Entity& entity)
 {
-  auto& dataOpt = m_components.data(instance);
-  if (!dataOpt) { return; }
+  const auto instance = m_components.getComponent(entity);
+  if (instance)
+  {
+    computeWorldTransforms(*instance);
+  }
+}
 
-  auto& data = *dataOpt;
+OptionalRef<const glm::mat4>
+TransformManager::getWorldMatrix(const Entity& entity) const
+{
+  const auto instance = m_components.getComponent(entity);
+  return instance ? m_components.components()[instance] : std::nullopt;
+}
+
+void
+TransformManager::computeWorldTransforms(TransformId instance)
+{
+  auto& components = m_components.components();
+  auto& data = components[instance];
   if (!data.isDirty) { return; }
 
   data.isDirty = false;
 
-  // TODO: maybe the case where the parent data is none shouldnt happen,
-  // i.e: the parent isnt added yet to the list.
-  if (!data.parent || !m_components.data(data.parent))
+  if (!data.parent)
   {
     data.localToWorld = data.modelToLocal;
     return;
   }
 
-  computeWorldTransforms(data.parent);
-  auto& parentData = *m_components.data(data.parent);
+  computeWorldTransforms(*data.parent);
+
+  const auto& parentData = components.data[*data.parent];
   data.localToWorld = parentData.localToWorld * data.modelToLocal;
 }
 

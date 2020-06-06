@@ -107,16 +107,16 @@ class FlattenTask {
 }
 
 Scene&
-Scene::addInstance(Instance instance, InstanceData&& data)
+Scene::addInstance(const Entity& entity, InstanceData&& data)
 {
-  m_data.add(instance, std::move(data));
+  m_data.createComponent(entity, std::move(data));
   return *this;
 }
 
 Scene&
-Scene::deleteInstance(Instance instance)
+Scene::deleteInstance(const Entity& entity)
 {
-  m_data.remove(instance);
+  m_data.removeComponent(entity);
   return *this;
 }
 
@@ -124,20 +124,19 @@ Scene::deleteInstance(Instance instance)
 // TODO: improve API by letting user set the instanc with the mesh?
 // TODO: not great API here, because the BVH **has** to be built before calling this method.
 Scene&
-Scene::addRenderable(Instance instance, size_t meshIndex)
+Scene::addRenderable(const Entity& entity, size_t meshIndex)
 {
-  Renderable r;
-  r.bvhRootIndex = m_nodes.entries[meshIndex];
+  RenderableData r;
   r.materialIndex = 0;
-  m_renderables.add(instance, std::move(r));
+  m_renderables.createComponent(entity, std::move(r));
   return *this;
 }
 
 // TODO: expose a renderable manager directly.
 Scene&
-Scene::deleteRenderable(Instance instance)
+Scene::deleteRenderable(const Entity& entity)
 {
-  m_renderables.remove(instance);
+  m_renderables.removeComponent(entity);
   return *this;
 }
 
@@ -246,38 +245,27 @@ Scene::update()
   // TODO: update only when dirty.
   m_transformManager.computeWorldTransforms();
 
-  const auto& renderableData = m_renderables.all();
-  const auto& renderableInstances = m_renderables.instances();
-  m_instances.reserve(renderableInstances.capacity());
-  for (size_t i = 0; i < renderableInstances.size(); ++i)
+  const auto& renderableComponents = m_renderables.components();
+  const auto& renderableEntities = m_renderables.entities();
+  m_instances.resize(renderableEntities.capacity());
+  for (size_t i = 0; i < renderableComponents.size(); ++i)
   {
-    const auto& instance = renderableInstances[i];
-    const auto& renderable = renderableData[i];
+    const auto& data = renderableComponents[i];
+    const auto entity = renderableEntities[i];
     auto& gpuInstance = m_instances[i];
 
     // TODO: adding the bvhRoot on each update shouldn't be needed.
-    gpuInstance.bvhRootIndex = m_nodes.entries[renderable.meshIndex];
-    gpuInstance.materialIndex = renderable.materialIndex;
+    gpuInstance.bvhRootIndex = m_nodes.entries[data.meshIndex];
+    gpuInstance.materialIndex = data.materialIndex;
 
-    if ()
+    const auto transformData = m_transformManager.getWorldMatrix(entity);
+    if (transformData)
     {
-      gpuInstance.modelToWorld = 
+      gpuInstance.modelToWorld = *transformData;
     }
   }
 
   return *this;
-}
-
-std::vector<Instance>
-Scene::findByName(const std::string& name)
-{
-  std::vector<Instance> result;
-  for (const auto& instance: m_data.instances())
-  {
-    auto& data = *m_data.data(instance);
-    if (data.name == name) { result.push_back(instance); }
-  }
-  return result;
 }
 
 } // namespace albedo

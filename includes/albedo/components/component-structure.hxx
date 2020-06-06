@@ -2,50 +2,54 @@ namespace albedo
 {
 
 template <class Instance, class DataType>
-Instance
-ComponentArray<Instance, DataType>::createComponent(Entity entity, T&& data)
+void
+ComponentArray<Instance, DataType>::createComponent(
+  const Entity& entity, DataType&& data
+)
 {
-  auto instanceIt = m_entityToIndex.find(entity);
-  if (instanceIt != m_entityToIndex.end())
+  if (hasComponent(entity))
   {
+    // TODO: instance lookep up twice, once in `hasComponent` and once in
+    // `removeComponent`.
     removeComponent(entity);
   }
-  auto index = m_instances.size();
-  m_instances.push_back(instance);
+  auto index = m_entities.size();
+  m_entities.push_back(entity);
   m_data.emplace_back(std::move(data));
-  m_entityToIndex[instance] = index;
+  m_entityToIndex[entity] = index;
 }
 
 template <class Instance, class DataType>
 void
-ComponentArray<Instance, DataType>::removeComponent(Instance instance)
+ComponentArray<Instance, DataType>::removeComponent(const Entity& entity)
 {
   // TODO: either make this function thread safe, or ask the user to make a
   // thread safe call.
 
-  auto instanceIt = m_entityToIndex.find(instance);
-  if (instanceIt == m_entityToIndex.end()) { return; }
+  auto indexIt = m_entityToIndex.find(entity);
+  if (indexIt == m_entityToIndex.end())
+  {
+    return;
+  }
 
-  // Index at which the data of this instance is located in every data buffer:
-  // transforms, etc...
-  auto dataIndex = instanceIt->second;
+  Instance index = indexIt->second;
 
   // Instance associated to the last data entry. This will be moved at the
   // position of the deleted instance.
-  auto lastIndex = m_instances.size() - 1;
-  auto lastInstance = m_instances[lastIndex];
+  Instance lastIndex = m_entities.size() - 1;
+  Entity lastEntity = m_entities[lastIndex];
 
   // Move the last element of every array at the position pointed by the
   // instance we are currently removing.
-  m_instances[dataIndex] = std::move(m_instances[lastIndex]);
-  m_data[dataIndex] = std::move(m_data[lastIndex]);
+  m_entities[index] = std::move(lastEntity);
+  m_data[index] = std::move(m_data[lastIndex]);
   m_data.pop_back();
-  m_instances.pop_back();
+  m_entities.pop_back();
 
   // Erase the target instance from the index map, and update the index of
   // the previous last element.
-  m_entityToIndex.erase(instanceIt);
-  if (instance != lastInstance) { m_entityToIndex[lastInstance] = dataIndex; }
+  m_entityToIndex.erase(indexIt);
+  if (index != lastIndex) { m_entityToIndex[lastEntity] = index; }
 }
 
 template <class Instance, class DataType>
@@ -56,29 +60,39 @@ ComponentArray<Instance, DataType>::hasComponent(const Entity& entity)
 }
 
 template <class Instance, class DataType>
-std::optional<Instance>
-ComponentArray<Instance, DataType>::getComponent(const Entity& entity)
+OptionalRef<DataType>
+ComponentArray<Instance, DataType>::getComponentData(const Entity& entity)
 {
-  auto instanceIt = m_entityToIndex.find(entity);
-  if (instanceIt != m_entityToIndex.end())
+  auto instance = getComponent(entity);
+  if (instance)
   {
-    return *instanceIt;
+    return m_data[*instance];
   }
   return std::nullopt;
 }
 
 template <class Instance, class DataType>
-DataType&
-ComponentArray<Instance, DataType>::data(Instance instance)
+OptionalRef<const DataType>
+ComponentArray<Instance, DataType>::getComponentData(const Entity& entity) const
 {
-  return m_data[instance];
+  auto instance = getComponent(entity);
+  if (instance)
+  {
+    return m_data[*instance];
+  }
+  return std::nullopt;
 }
 
 template <class Instance, class DataType>
-const DataType&
-ComponentArray<Instance, DataType>::data(Instance) const
+std::optional<Instance>
+ComponentArray<Instance, DataType>::getComponent(const Entity& entity) const
 {
-  return m_data[instance];
+  auto instanceIt = m_entityToIndex.find(entity);
+  if (instanceIt != m_entityToIndex.end())
+  {
+    return instanceIt->second;
+  }
+  return std::nullopt;
 }
 
 }

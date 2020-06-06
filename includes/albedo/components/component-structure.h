@@ -5,7 +5,8 @@
 #include <vector>
 
 #include <albedo/entity.h>
-#include <albedo/utils/identifier.h>
+#include <albedo/utils/index.h>
+#include <albedo/utils/optional-ref.h>
 
 namespace albedo
 {
@@ -16,57 +17,53 @@ struct EntityHash
   size_t
   operator()(const Entity& i) const
   {
-      return i.getId();
+      return i.getValue();
   }
 
 };
 
 // TODO: use a structure of array here instead.
+// TODO: implement iterator functions
 template <typename Instance, typename DataType>
 class ComponentArray
 {
+
   public:
 
-    Instance
-    createComponent(Entity entity, T&& data);
+    using EntityContainer = std::vector<Entity>;
+    using DataContainer = std::vector<DataType>;
+
+  public:
 
     void
-    removeComponent(Instance instance);
+    createComponent(const Entity& entity, DataType&& data);
+
+    void
+    removeComponent(const Entity& entity);
 
     bool
     hasComponent(const Entity& entity);
 
     std::optional<Instance>
-    getComponent(const Entity& entity);
+    getComponent(const Entity& entity) const;
 
-    inline DataType&
-    data(const Instance& component);
+    OptionalRef<DataType>
+    getComponentData(const Entity& entity);
 
-    inline const DataType&
-    data(const Instance& ComponentInstance) const;
+    OptionalRef<const DataType>
+    getComponentData(const Entity& entity) const;
 
-    inline OptionalRef<T>
-    getComponentData(Instance instance)
-    {
-      auto pos = m_entityToIndex.find(instance);
-      if (pos != m_entityToIndex.end())
-      {
-        return OptionalRef{m_data[pos->second]};
-      }
-      return OptionalRef{};
-    }
+    inline const DataContainer&
+    components() const { return m_data; }
 
-    inline const std::vector<T>&
-    all() const { return m_data; }
-
-    inline const std::vector<Instance>&
-    instances() const { return m_instances; }
+    inline const EntityContainer&
+    entities() const { return m_entities; }
 
   private:
 
-    std::unordered_map<Entity, Identifier::Size, EntityHash> m_entityToIndex;
-    std::vector<Instance> m_instances;
-    std::vector<DataType> m_data;
+    std::unordered_map<Entity, Instance, EntityHash> m_entityToIndex;
+    EntityContainer m_entities;
+    DataContainer m_data;
 
 };
 

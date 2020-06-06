@@ -164,15 +164,15 @@ GLTFLoader::processNode(
   const tinygltf::Model& model
 )
 {
-  Instance instance;
+  Entity entity;
 
-  scene.addInstance(instance, InstanceData {
+  scene.addInstance(entity, InstanceData {
     .name = std::move(node.name) // Name will not be used again, this is safe.
   });
 
-  std::cout << "Processing node " << scene.data<InstanceData>(instance).name << std::endl;
+  std::cout << "Processing node " << scene.data<InstanceData>(entity).name << std::endl;
 
-  Transform transform;
+  TransformData transform;
 
   // Process transform.
   if (node.matrix.size() != 0)
@@ -199,11 +199,11 @@ GLTFLoader::processNode(
     );
   }
 
-  scene.getTransformManager().createComponent(instance, std::move(transform));
+  scene.getTransformManager().createComponent(entity, std::move(transform));
 
   if (node.mesh >= 0)
   {
-    scene.addRenderable(instance, node.mesh);
+    scene.addRenderable(entity, node.mesh);
   }
 
   // Traverse graph.

@@ -10,9 +10,11 @@
 #include <glm/glm.hpp>
 #include <albedo/components/component-structure.h>
 #include <albedo/components/transform.h>
-#include <albedo/instance.h>
+#include <albedo/entity.h>
 #include <albedo/material.h>
 #include <albedo/mesh.h>
+#include <albedo/utils/index.h>
+#include <albedo/utils/optional-ref.h>
 
 namespace albedo
 {
@@ -25,12 +27,28 @@ namespace
   struct FalseTrait : std::false_type {};
 }
 
+// TODO: move ID class into a ComponentData::using.
+class InstanceId: public Index
+{
+  public:
+
+    InstanceId(Index::Type value) noexcept : Index(value) { }
+};
+
 struct InstanceData
 {
   std::string name;
 };
 
-struct Renderable
+// TODO: move ID class into a ComponentData::using.
+class RenderableId: public Index
+{
+  public:
+
+    RenderableId(Index::Type value) noexcept : Index(value) { }
+};
+
+struct RenderableData
 {
   Mesh::IndexType meshIndex;
   Mesh::IndexType materialIndex;
@@ -100,10 +118,10 @@ class Scene
   public:
 
     Scene&
-    addInstance(Instance instance, InstanceData&& = InstanceData{});
+    addInstance(const Entity&, InstanceData&& = InstanceData{});
 
     Scene&
-    deleteInstance(Instance instance);
+    deleteInstance(const Entity&);
 
   public:
 
@@ -116,11 +134,11 @@ class Scene
     // TODO: expose a renderable manager directly.
     // TODO: improve API by letting user set the instanc with the mesh?
     Scene&
-    addRenderable(Instance instance, size_t meshIndex);
+    addRenderable(const Entity&, size_t meshIndex);
 
     // TODO: expose a renderable manager directly.
     Scene&
-    deleteRenderable(Instance instance);
+    deleteRenderable(const Entity&);
 
     Scene&
     update();
@@ -130,23 +148,16 @@ class Scene
 
   public:
 
-    // TODO: add perfect forwarding to m_data, and put this method const.
-    std::vector<Instance>
-    findByName(const std::string& name);
-
-  public:
-
     template <typename T>
-    T&
-    data(Instance instance);
+    OptionalRef<T>
+    data(const Entity&);
 
     inline TransformManager&
     getTransformManager() { return m_transformManager; }
 
   private:
-    ComponentArray<InstanceData> m_data;
-    ComponentArray<Renderable> m_renderables;
-    ComponentArray<Material> m_materials;
+    ComponentArray<InstanceId, InstanceData> m_data;
+    ComponentArray<RenderableId, RenderableData> m_renderables;
 
     TransformManager m_transformManager;
 
@@ -159,18 +170,24 @@ class Scene
 };
 
 template <typename T>
-T&
-Scene::data(Instance instance)
+OptionalRef<T>
+Scene::data(const Entity& entity)
 {
   static_assert(FalseTrait<T>::value, "unsupported type. Check available components");
 }
 
 template <>
-inline InstanceData&
-Scene::data<InstanceData>(Instance instance) { return m_data.data(instance); }
+inline OptionalRef<InstanceData>
+Scene::data<InstanceData>(const Entity& entity)
+{
+  return m_data.getComponentData(entity);
+}
 
 template <>
-inline Renderable&
-Scene::data<Renderable>(Instance instance) { return m_renderables.data(instance); }
+inline OptionalRef<RenderableData>
+Scene::data<RenderableData>(const Entity& entity)
+{
+  return m_renderables.getComponentData(entity);
+}
 
 } // namespace albedo

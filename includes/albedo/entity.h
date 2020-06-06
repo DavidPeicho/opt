@@ -5,6 +5,8 @@
 namespace albedo
 {
 
-class Entity: public GlobalIndex { };
+class Entity: public GlobalIdentifier
+{
+};
 
 } // namespace albedo

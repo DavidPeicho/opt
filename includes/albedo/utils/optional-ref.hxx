@@ -4,16 +4,6 @@ namespace albedo
 {
 
 template <class T>
-OptionalRef<T>::OptionalRef() noexcept
-  : m_ref{std::nullopt}
-{ }
-
-template <class T>
-OptionalRef<T>::OptionalRef(T& value) noexcept
-  : m_ref{value}
-{ }
-
-template <class T>
 constexpr T&
 OptionalRef<T>::value()
 {

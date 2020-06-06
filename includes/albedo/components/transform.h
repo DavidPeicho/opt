@@ -5,6 +5,9 @@
 #include <glm/glm.hpp>
 #include <albedo/components/component-structure.h>
 #include <albedo/mesh.h>
+#include <albedo/entity.h>
+#include <albedo/utils/index.h>
+#include <albedo/utils/optional-ref.h>
 
 namespace albedo
 {
@@ -12,12 +15,23 @@ namespace albedo
 namespace components
 {
 
+// TODO: Should we rename `Component` into `ComponentInstance` or
+// `ComponentIndex` for clarity?
+
+// TODO: move ID class into a ComponentData::using.
+class TransformId : public Index
+{
+  public:
+
+    TransformId(Index::Type value) noexcept : Index(value) { }
+};
+
 // TODO: convert to structure of array?
-struct Transform
+struct TransformData
 {
   glm::mat4 modelToLocal;
   glm::mat4 localToWorld;
-  std::optional<Instance> parent;
+  std::optional<TransformId> parent;
   bool isDirty;
 };
 
@@ -29,22 +43,30 @@ class TransformManager
   public:
 
     TransformManager&
-    createComponent(Instance instance);
+    createComponent(const Entity&);
 
     TransformManager&
-    createComponent(Instance instance, Transform&&);
+    createComponent(const Entity&, TransformData&&);
 
     void
     computeWorldTransforms();
 
     void
-    computeWorldTransforms(Instance instance);
+    computeWorldTransforms(const Entity&);
 
   public:
 
+    OptionalRef<const glm::mat4>
+    getWorldMatrix(const Entity&) const;
+
   private:
 
-    ComponentArray<Transform> m_components;
+    void
+    computeWorldTransforms(const TransformId& instance);
+
+  private:
+
+    ComponentArray<TransformId, TransformData> m_components;
 
 };
 
