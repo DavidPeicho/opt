@@ -1,7 +1,7 @@
 #pragma once
 
 #include <optional>
-#include <unordered_set>
+#include <unordered_map>
 #include <vector>
 
 #include <albedo/entity.h>
@@ -11,25 +11,14 @@
 namespace albedo
 {
 
-struct EntityHash
-{
-
-  size_t
-  operator()(const Entity& i) const
-  {
-      return i.getValue();
-  }
-
-};
-
 // TODO: use a structure of array here instead.
 // TODO: implement iterator functions
 template <typename DataType>
 class ComponentArray
 {
-
   public:
 
+    using ComponentId = typename DataType::Id;
     using EntityContainer = std::vector<Entity>;
     using DataContainer = std::vector<DataType>;
 
@@ -56,12 +45,15 @@ class ComponentArray
     inline const DataContainer&
     components() const { return m_data; }
 
+    inline DataContainer&
+    components() { return m_data; }
+
     inline const EntityContainer&
     entities() const { return m_entities; }
 
   private:
 
-    std::unordered_map<Entity, typename DataType::Id, EntityHash> m_entityToIndex;
+    std::unordered_map<Entity, typename DataType::Id> m_entityToIndex;
     EntityContainer m_entities;
     DataContainer m_data;
 

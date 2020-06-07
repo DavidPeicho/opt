@@ -16,7 +16,7 @@ class Index {
 
   public:
 
-    Index(Index::Type value) noexcept
+    explicit Index(Index::Type value) noexcept
       : m_value(value)
     { }
 
@@ -34,7 +34,8 @@ class Index {
     Type
     operator()() const { return m_value; }
 
-    constexpr operator Type() const noexcept { return m_value; }
+    constexpr
+    operator Type() const noexcept { return m_value; }
 
     bool
     operator==(Index e) const { return e.m_value == m_value; }
@@ -45,6 +46,18 @@ class Index {
     bool
     operator<(Index e) const { return e.m_value < m_value; }
 
+    constexpr Index&
+    operator++() noexcept { ++m_value; return *this; }
+
+    constexpr Index&
+    operator--() noexcept { --m_value; return *this; }
+
+    constexpr const Index
+    operator++(int) const noexcept { return Index{ m_value + 1 }; }
+
+    constexpr const Index
+    operator--(int) const noexcept { return Index{ m_value - 1 }; }
+
     // an id that can be used for debugging/printing
     inline Type
     getValue() const noexcept { return m_value; }
@@ -54,92 +67,6 @@ class Index {
     Type m_value = 0;
 
 };
-
-/* Overload comparisons of a `Index` object with `Index::Type`. */
-
-template <typename Tag>
-constexpr bool
-operator==(const Index<Tag>& i, typename Index<Tag>::Type rhs) noexcept
-{
-  return i.getValue() == rhs;
-}
-
-template <typename Tag>
-constexpr bool
-operator==(typename Index<Tag>::Type lhs, const Index<Tag>& i) noexcept
-{
-  return i.getValue() == lhs;
-}
-
-template <typename Tag>
-constexpr bool
-operator!=(const Index<Tag>& i, typename Index<Tag>::Type rhs) noexcept
-{
-  return i.getValue() != rhs;
-}
-
-template <typename Tag>
-constexpr bool
-operator!=(typename Index<Tag>::Type lhs, const Index<Tag>& i) noexcept
-{
-  return i.getValue() != lhs;
-}
-
-template <typename Tag>
-constexpr bool
-operator<(const Index<Tag>& i, typename Index<Tag>::Type rhs) noexcept
-{
-  return i.getValue() < rhs;
-}
-
-template <typename Tag>
-constexpr bool
-operator<(typename Index<Tag>::Type lhs , const Index<Tag>& i) noexcept
-{
-  return i.getValue() < lhs;
-}
-
-template <typename Tag>
-constexpr bool
-operator<=(const Index<Tag>& i, typename Index<Tag>::Type rhs) noexcept
-{
-  return i.getValue() <= rhs;
-}
-
-template <typename Tag>
-constexpr bool
-operator<=(typename Index<Tag>::Type lhs, const Index<Tag>& i) noexcept
-{
-  return i.getValue() <= lhs;
-}
-
-template <typename Tag>
-constexpr bool
-operator>(const Index<Tag>& i, typename Index<Tag>::Type rhs) noexcept
-{
-  return i.getValue() > rhs;
-}
-
-template <typename Tag>
-constexpr bool
-operator>(typename Index<Tag>::Type lhs, const Index<Tag>& i) noexcept
-{
-  return i.getValue() > lhs;
-}
-
-template <typename Tag>
-constexpr bool
-operator>=(const Index<Tag>& i, typename Index<Tag>::Type rhs) noexcept
-{
-  return i.getValue() >= rhs;
-}
-
-template <typename Tag>
-constexpr bool
-operator>=(typename Index<Tag>::Type lhs, const Index<Tag>& i) noexcept
-{
-  return i.getValue() >= lhs;
-}
 
 // TODO: using a global counter like that isn't a good idea, as we may run
 // out of values in the future. A class managing alive / dead entities could

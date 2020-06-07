@@ -13,7 +13,7 @@ ComponentArray<DataType>::createComponent(
     // `removeComponent`.
     removeComponent(entity);
   }
-  auto index = m_entities.size();
+  ComponentId index(m_entities.size());
   m_entities.push_back(entity);
   m_data.emplace_back(std::move(data));
   m_entityToIndex[entity] = index;

@@ -126,8 +126,9 @@ Scene::deleteInstance(const Entity& entity)
 Scene&
 Scene::addRenderable(const Entity& entity, size_t meshIndex)
 {
-  RenderableData r;
+  Renderable r;
   r.materialIndex = 0;
+  r.meshIndex = meshIndex;
   m_renderables.createComponent(entity, std::move(r));
   return *this;
 }

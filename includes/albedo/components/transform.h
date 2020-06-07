@@ -16,7 +16,7 @@ namespace albedo
 namespace components
 {
 
-class Transform : public Component<Transform>
+struct Transform : public Component<Transform>
 {
   glm::mat4 modelToLocal;
   glm::mat4 localToWorld;
@@ -31,11 +31,18 @@ class TransformManager
 
   public:
 
+    using TransformId = typename Transform::Id;
+
+  public:
+
     TransformManager&
     createComponent(const Entity&);
 
     TransformManager&
     createComponent(const Entity&, Transform&&);
+
+    TransformManager&
+    addChild(Entity child, Entity parent);
 
     void
     computeWorldTransforms();
@@ -51,7 +58,7 @@ class TransformManager
   private:
 
     void
-    computeWorldTransforms(const Transform::Id& instance);
+    computeWorldTransforms(const TransformId& instance);
 
   private:
 

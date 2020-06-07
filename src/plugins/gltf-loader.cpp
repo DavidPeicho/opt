@@ -170,9 +170,9 @@ GLTFLoader::processNode(
     .name = std::move(node.name) // Name will not be used again, this is safe.
   });
 
-  std::cout << "Processing node " << scene.data<InstanceData>(entity).name << std::endl;
+  std::cout << "Processing node " << scene.data<InstanceData>(entity)->name << std::endl;
 
-  TransformData transform;
+  components::Transform transform;
 
   // Process transform.
   if (node.matrix.size() != 0)
@@ -189,17 +189,15 @@ GLTFLoader::processNode(
       glm::mat4(1.0),
       t.size() > 0 ? glm::vec3(t[0], t[1], t[2]) : glm::vec3(0.0)
     );
-    transform.modelToLocal = glm::rotate(
-      transform.modelToLocal,
-      r.size() > 0 ? glm::quat(r[3], r[0], r[1], r[2])
-    );
+    const auto rotQuat = r.size() > 0 ? glm::quat(r[3], r[0], r[1], r[2]) : glm::quat();
+    transform.modelToLocal = glm::mat4_cast(rotQuat) * transform.modelToLocal;
     transform.modelToLocal = glm::scale(
       transform.modelToLocal,
       s.size() > 0 ? glm::vec3(s[0], s[1], s[2]) : glm::vec3(0.0)
     );
   }
 
-  scene.getTransformManager().createComponent(entity, std::move(transform));
+  auto& transforms = scene.getTransformManager();
 
   if (node.mesh >= 0)
   {
@@ -210,7 +208,9 @@ GLTFLoader::processNode(
   for (const auto& child: node.children)
   {
     processNode(scene, model.nodes[child], model);
+
   }
+  transforms.createComponent(entity, std::move(transform));
 }
 
 } // namespace loader

@@ -1,8 +1,8 @@
-#include <albedo/utils/identifier.h>
+#include <albedo/utils/index.h>
 
 namespace albedo
 {
 
-std::atomic<Identifier::Size> GlobalIdentifier::globalId = 0;
+std::atomic<GlobalIdentifier::Type> GlobalIdentifier::globalId = 0;
 
 } // namespace albedo
