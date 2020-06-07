@@ -13,6 +13,8 @@ struct Vertex
 {
   glm::vec3 position;
   uint32_t padding_0; // For GPU
+  glm::vec3 normal;
+  uint32_t padding_1; // For GPU
   // TODO: add UV
 };
 

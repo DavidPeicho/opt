@@ -14,9 +14,9 @@ struct Ray {
 };
 
 struct Intersection {
-  float dist;
   vec2 uv;
-  vec3 normal;
+  float dist;
+  uint index;
 };
 
 struct Instance
@@ -34,10 +34,13 @@ struct BVHNode
   uint primitiveStartIndex;
 };
 
+// TODO: split into multiple arrays?
 struct Vertex
 {
   vec3 position;
   uint padding_0;
+  vec3 normal;
+  uint padding_1;
 };
 
 layout (binding = 0) uniform RenderSettingsBuffer {
@@ -63,6 +66,12 @@ layout (set = 0, binding = 4, std430) readonly buffer VertexBuffer {
 };
 
 layout(location = 0) out vec4 outColor;
+
+Vertex
+getVertex(uint index)
+{
+  return vertices[indices[index]];
+}
 
 // TODO: move to intersection pass.
 Ray
@@ -98,9 +107,9 @@ intersectTriangle(Ray ray, uint startIndex, inout Intersection intersection)
 {
   // TODO: pre-process edge?
   // Maybe not really useful if decide to add skinning in shader.
-  vec3 v0 = vertices[indices[startIndex]].position;
-  vec3 v1 = vertices[indices[startIndex + 1]].position;
-  vec3 v2 = vertices[indices[startIndex + 2]].position;
+  vec3 v0 = getVertex(startIndex).position;
+  vec3 v1 = getVertex(startIndex + 1).position;
+  vec3 v2 = getVertex(startIndex + 2).position;
 
   vec3 e1 = v1 - v0;
   vec3 e2 = v2 - v0;
@@ -109,7 +118,7 @@ intersectTriangle(Ray ray, uint startIndex, inout Intersection intersection)
   float det = dot(e1, p);
 
   // Ray is parralel to edge.
-  // if (det <= - 0.000000001) { return false; }
+  if (det <= - EPSILON) { return false; }
   if (abs(det) < EPSILON) { return false; }
 
   float invDet = 1.0 / det;
@@ -118,19 +127,16 @@ intersectTriangle(Ray ray, uint startIndex, inout Intersection intersection)
   vec3 centered = ray.origin - v0;
 
   float u = dot(centered, p) * invDet;
-  if (u < EPSILON || u > EPSILON1) {
-    return false;
-  }
+  if (u < EPSILON || u > EPSILON1) { return false; }
 
   vec3 q = cross(centered, e1);
   float v = dot(ray.dir, q) * invDet;
-  if (v < EPSILON || u + v > EPSILON1) {
-    return false;
-  }
+  if (v < EPSILON || u + v > EPSILON1) { return false; }
 
-  intersection.dist = dot(e2, q) * invDet;
   intersection.uv = vec2(u, v);
-  intersection.normal = - cross(e1, e2); // TODO: replace by interpolated normal
+  intersection.dist = dot(e2, q) * invDet;
+  intersection.index = startIndex;
+
   return true;
 }
 
@@ -204,6 +210,12 @@ void main()
   outColor = vec4(vec3(0.0), 1.0);
 
   if (intersection.dist < MAX_FLOAT) {
-    outColor = vec4(- intersection.normal, 1.0);
+    vec2 uv = intersection.uv;
+    float barycentricW = 1.0 - uv.x - uv.y;
+    vec3 n0 = getVertex(intersection.index).normal;
+    vec3 n1 = getVertex(intersection.index + 1).normal;
+    vec3 n2 = getVertex(intersection.index + 2).normal;
+    vec3 normal = barycentricW * n0 + uv.x * n1 + uv.y * n2;
+    outColor = vec4(normal, 1.0);
   }
 }

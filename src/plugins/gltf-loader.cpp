@@ -127,14 +127,22 @@ GLTFLoader::processMeshes(Scene& scene, const tinygltf::Model& model)
         model, positionAccessor
       );
 
+      // TODO: compute face normal if no normal provided.
+      const auto& normalAccessor = model.accessors[
+        primitive.attributes.at("NORMAL")
+      ];
+      auto [ normalBuffer, normalStride ] = getAccessorDataPointerAndStride<glm::vec3>(
+        model, normalAccessor
+      );
+
       uint32_t startIndex = mesh.getVertexBuffer().size();
 
       for (size_t i = 0; i < positionAccessor.count; ++i)
       {
         Vertex v;
         v.position = positionsBuffer[positionStride * i];
-        // TODO: handle normal and UVs
-        // TODO: compute face normal if no normal provided.
+        v.normal = normalBuffer[normalStride * i];
+        // TODO: handle UVs
         mesh.getVertexBuffer().emplace_back(std::move(v));
       }
 
