@@ -27,13 +27,16 @@ class ComponentArray
     ComponentId
     createComponent(const Entity& entity, DataType&& data);
 
+    ComponentId
+    getOrCreateComponent(const Entity& entity);
+
     void
     removeComponent(const Entity& entity);
 
     bool
     hasComponent(const Entity& entity);
 
-    std::optional<typename DataType::Id>
+    std::optional<ComponentId>
     getComponent(const Entity& entity) const;
 
     OptionalRef<DataType>

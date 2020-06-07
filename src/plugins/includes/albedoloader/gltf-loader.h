@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <glm/glm.hpp>
+#include <albedo/entity.h>
 #include <albedo/mesh.h>
 #include <albedo/scene.h>
 
@@ -33,7 +34,7 @@ class GLTFLoader
     void
     processMeshes(Scene& scene, const tinygltf::Model& model);
 
-    void
+    Entity
     processNode(Scene& scene, const tinygltf::Node& node, const tinygltf::Model& model);
 
   private:

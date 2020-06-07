@@ -157,7 +157,7 @@ GLTFLoader::processMeshes(Scene& scene, const tinygltf::Model& model)
   }
 }
 
-void
+Entity
 GLTFLoader::processNode(
   Scene& scene,
   const tinygltf::Node& node,
@@ -194,10 +194,9 @@ GLTFLoader::processNode(
     transform.modelToLocal = glm::mat4_cast(rotQuat) * transform.modelToLocal;
     transform.modelToLocal = glm::scale(
       transform.modelToLocal,
-      s.size() > 0 ? glm::vec3(s[0], s[1], s[2]) : glm::vec3(0.0)
+      s.size() > 0 ? glm::vec3(s[0], s[1], s[2]) : glm::vec3(1.0)
     );
   }
-
 
   if (node.mesh >= 0)
   {
@@ -207,9 +206,12 @@ GLTFLoader::processNode(
   // Traverse graph.
   for (const auto& child: node.children)
   {
-    processNode(scene, model.nodes[child], model);
+    const auto childEntity = processNode(scene, model.nodes[child], model);
+    transforms.attach(childEntity, entity);
   }
   transforms.createComponent(entity, std::move(transform));
+
+  return entity;
 }
 
 } // namespace loader

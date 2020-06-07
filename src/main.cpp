@@ -94,18 +94,27 @@ int main() {
 
   WGPUDeviceId deviceId = wgpu_adapter_request_device(adapterId, &deviceDescriptor, NULL);
 
+  std::cout << "Loading scene..." << std::endl;
+
   albedo::loader::GLTFLoader loader;
   auto sceneOptional = loader.load("../box.glb");
-
   if (!sceneOptional)
   {
     std::cerr << "Failed to load scene" << std::endl;
     return 1;
   }
 
+  std::cout << "Scene loaded!" << std::endl;
+
   auto& scene = sceneOptional.value();
+
+  std::cout << "Building scene...." << std::endl;
   scene.build();
+  std::cout << "Scene built!" << std::endl;
+
+  std::cout << "Updating scene...." << std::endl;
   scene.update();
+  std::cout << "Scene updated!" << std::endl;
 
   albedo::Renderer renderer(deviceId, gSurfaceId);
   renderer.init(scene);

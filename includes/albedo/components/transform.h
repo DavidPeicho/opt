@@ -51,8 +51,13 @@ class TransformManager
 
     // TODO: implement `removeComponent`.
 
+    // TODO: implement every version using instance instead of entity?
+    // The only issue that arise for me: when a component is deleted, the last
+    // component is moved to fill the gap, invalidating the instace...
+    // if someone still use an old instance, this **will** break...
+
     TransformManager&
-    attachTo(Entity child, Entity parent);
+    attach(const Entity& child, const Entity& parent);
 
     TransformManager&
     detach(const Entity&);

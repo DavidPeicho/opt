@@ -266,6 +266,12 @@ Scene::update()
     }
   }
 
+  for (const auto& i: m_instances)
+  {
+    std::cout << "instances" << std::endl;
+    std::cout << glm::to_string(i.modelToWorld) << std::endl;
+  }
+
   return *this;
 }
 

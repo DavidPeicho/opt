@@ -2,7 +2,7 @@ namespace albedo
 {
 
 template <class DataType>
-ComponentId
+typename DataType::Id
 ComponentArray<DataType>::createComponent(
   const Entity& entity, DataType&& data
 )
@@ -18,6 +18,15 @@ ComponentArray<DataType>::createComponent(
   m_data.emplace_back(std::move(data));
   m_entityToIndex[entity] = index;
   return index;
+}
+
+template <class DataType>
+typename DataType::Id
+ComponentArray<DataType>::getOrCreateComponent(const Entity& entity)
+{
+  auto instance = getComponent(entity);
+  if (instance) { return *instance; }
+  return createComponent(entity, DataType{});
 }
 
 template <class DataType>
