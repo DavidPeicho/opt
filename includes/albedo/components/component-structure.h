@@ -24,7 +24,7 @@ class ComponentArray
 
   public:
 
-    void
+    ComponentId
     createComponent(const Entity& entity, DataType&& data);
 
     void

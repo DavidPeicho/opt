@@ -21,9 +21,25 @@ TransformManager::createComponent(const Entity& entity, Transform&& data)
 }
 
 TransformManager&
-TransformManager::addChild(Entity child, Entity parent)
+TransformManager::attach(const Entity& child, const Entity& parent)
 {
-  reutrn *this;
+  auto parentInstance = m_components.getComponent(parent);
+  if (!parent) { parentInstance =  }
+  return *this;
+}
+
+TransformManager&
+TransformManager::detach(const Entity& entity)
+{
+  // TODO: convert parent model to a sibling / child references.
+  // When the new model is used, children should be detached automatically.
+}
+
+TransformManager&
+TransformManager::detachChildren(const Entity& entity)
+{
+  // TODO: convert parent model to a sibling / child references.
+  // When the new model is used, children should be detached automatically.
 }
 
 void

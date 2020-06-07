@@ -172,6 +172,7 @@ GLTFLoader::processNode(
 
   std::cout << "Processing node " << scene.data<InstanceData>(entity)->name << std::endl;
 
+  auto& transforms = scene.getTransformManager();
   components::Transform transform;
 
   // Process transform.
@@ -197,7 +198,6 @@ GLTFLoader::processNode(
     );
   }
 
-  auto& transforms = scene.getTransformManager();
 
   if (node.mesh >= 0)
   {
@@ -208,7 +208,6 @@ GLTFLoader::processNode(
   for (const auto& child: node.children)
   {
     processNode(scene, model.nodes[child], model);
-
   }
   transforms.createComponent(entity, std::move(transform));
 }

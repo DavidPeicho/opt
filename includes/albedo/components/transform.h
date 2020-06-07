@@ -16,8 +16,16 @@ namespace albedo
 namespace components
 {
 
+// TODO: convert parent model to a sibling / child references.
 struct Transform : public Component<Transform>
 {
+  Transform()
+  {
+    modelToLocal = glm::mat4(1.0);
+    localToWorld = glm::mat4(1.0);
+    isDirty = false;
+  }
+
   glm::mat4 modelToLocal;
   glm::mat4 localToWorld;
   std::optional<Transform::Id> parent;
@@ -41,8 +49,16 @@ class TransformManager
     TransformManager&
     createComponent(const Entity&, Transform&&);
 
+    // TODO: implement `removeComponent`.
+
     TransformManager&
-    addChild(Entity child, Entity parent);
+    attachTo(Entity child, Entity parent);
+
+    TransformManager&
+    detach(const Entity&);
+
+    TransformManager&
+    detachChildren(const Entity&);
 
     void
     computeWorldTransforms();
