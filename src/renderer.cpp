@@ -61,33 +61,38 @@ Renderer::init(const Scene& scene)
   WGPUShaderModuleId vertexShader = wgpu_device_create_shader_module(m_deviceId, &vertexModuleDescriptor);
   WGPUShaderModuleId fragmentShader = wgpu_device_create_shader_module(m_deviceId, &fragmentModuleDescriptor);
 
-  const WGPUBindGroupLayoutEntry layoutEntries[4] = {
-      {
-          .binding = 0,
-          .visibility = WGPUShaderStage_FRAGMENT,
-          .ty = WGPUBindingType_UniformBuffer
-      },
-      {
-          .binding = 1,
-          .visibility = WGPUShaderStage_FRAGMENT,
-          .ty = WGPUBindingType_ReadonlyStorageBuffer
-      },
-      {
-          .binding = 2,
-          .visibility = WGPUShaderStage_FRAGMENT,
-          .ty = WGPUBindingType_ReadonlyStorageBuffer
-      },
-      {
-          .binding = 3,
-          .visibility = WGPUShaderStage_FRAGMENT,
-          .ty = WGPUBindingType_ReadonlyStorageBuffer
-      },
-    };
+  const WGPUBindGroupLayoutEntry layoutEntries[5] = {
+    {
+        .binding = 0,
+        .visibility = WGPUShaderStage_FRAGMENT,
+        .ty = WGPUBindingType_UniformBuffer
+    },
+    {
+        .binding = 1,
+        .visibility = WGPUShaderStage_FRAGMENT,
+        .ty = WGPUBindingType_ReadonlyStorageBuffer
+    },
+    {
+        .binding = 2,
+        .visibility = WGPUShaderStage_FRAGMENT,
+        .ty = WGPUBindingType_ReadonlyStorageBuffer
+    },
+    {
+        .binding = 3,
+        .visibility = WGPUShaderStage_FRAGMENT,
+        .ty = WGPUBindingType_ReadonlyStorageBuffer
+    },
+    {
+        .binding = 4,
+        .visibility = WGPUShaderStage_FRAGMENT,
+        .ty = WGPUBindingType_ReadonlyStorageBuffer
+    },
+  };
 
   WGPUBindGroupLayoutDescriptor bindLayoutGroupDesriptor {
       .label = "bind group layout",
       .entries = layoutEntries,
-      .entries_length = 4,
+      .entries_length = 5,
   };
 
   WGPUBindGroupLayoutId bindLayoutGroupId = wgpu_device_create_bind_group_layout(m_deviceId, &bindLayoutGroupDesriptor);
@@ -106,10 +111,12 @@ Renderer::init(const Scene& scene)
   m_renderPipeline.bindFragmentShader(fragmentShader, "main");
   m_renderPipeline.create(m_deviceId, pipelineLayoutId);
 
+  m_info.instanceCount = scene.m_instances.size();
   m_renderInfoBuffer.setUsage(WGPUBufferUsage_COPY_DST | WGPUBufferUsage_UNIFORM);
   m_renderInfoBuffer.setSize(1);
   m_renderInfoBuffer.create(m_deviceId);
 
+  m_instanceBuffer.create(m_deviceId, scene.m_instances);
   m_nodesBuffer.create(m_deviceId, scene.m_nodes.data);
   m_vertexBuffer.create(m_deviceId, scene.m_vertices.data);
   m_indicesBuffer.create(m_deviceId, scene.m_indices.data);
@@ -119,6 +126,15 @@ Renderer::init(const Scene& scene)
       .buffer = (WGPUBufferBinding) {
           .buffer = m_renderInfoBuffer.id(),
           .size = m_renderInfoBuffer.getByteSize(),
+          .offset = 0
+      }
+  };
+
+  WGPUBindingResource instanceResource = {
+    .tag = WGPUBindingResource_Buffer,
+      .buffer = (WGPUBufferBinding) {
+          .buffer = m_instanceBuffer.id(),
+          .size = m_instanceBuffer.getByteSize(),
           .offset = 0
       }
   };
@@ -141,7 +157,7 @@ Renderer::init(const Scene& scene)
       }
   };
 
-  WGPUBindingResource inputResource = {
+  WGPUBindingResource bvhResource = {
     .tag = WGPUBindingResource_Buffer,
       .buffer = (WGPUBufferBinding) {
           .buffer = m_nodesBuffer.id(),
@@ -156,16 +172,20 @@ Renderer::init(const Scene& scene)
   }, 0);
   m_bindGroup.setEntry(WGPUBindGroupEntry {
       .binding = 1,
-			.resource = inputResource
+			.resource = instanceResource
   }, 1);
   m_bindGroup.setEntry(WGPUBindGroupEntry {
       .binding = 2,
-			.resource = indexResource
+			.resource = bvhResource
   }, 2);
   m_bindGroup.setEntry(WGPUBindGroupEntry {
       .binding = 3,
-			.resource = vertexResource
+			.resource = indexResource
   }, 3);
+  m_bindGroup.setEntry(WGPUBindGroupEntry {
+      .binding = 4,
+			.resource = vertexResource
+  }, 4);
 
   m_bindGroup.create(m_deviceId, bindLayoutGroupId);
 

@@ -62,7 +62,7 @@ int main() {
   }
 
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  window = glfwCreateWindow(640, 480, "wgpu with glfw", NULL, NULL);
+  window = glfwCreateWindow(640, 480, "OPT: Over-engineered PathTracer", NULL, NULL);
 
   if (!window)
   {

@@ -17,8 +17,8 @@ namespace albedo
 struct RenderInfo {
   uint width;
   uint height;
+  uint instanceCount;
   uint pad_0;
-  uint pad_1;
 };
 
 // TODO: add PIML? is it worth for people to access internal WGPU wrapper?
@@ -76,11 +76,12 @@ class Renderer
     WGPUSwapChainId m_swapChainId;
 
     backend::RenderPipeline m_renderPipeline;
-    backend::BindGroup<4> m_bindGroup;
+    backend::BindGroup<5> m_bindGroup;
     WGPUCommandEncoderId m_commandEncoder; // TODO: refactor out?
 
     backend::Buffer<RenderInfo> m_renderInfoBuffer;
     backend::Buffer<BVHNodeGPU> m_nodesBuffer;
+    backend::Buffer<InstanceGPU> m_instanceBuffer;
     backend::Buffer<Vertex> m_vertexBuffer;
     backend::Buffer<Mesh::IndexType> m_indicesBuffer;
 

@@ -19,6 +19,13 @@ struct Intersection {
   vec3 normal;
 };
 
+struct Instance
+{
+  mat4 modelToWorld;
+  uint bvhRootIndex;
+  uint materialIndex;
+};
+
 struct BVHNode
 {
   vec3 min;
@@ -36,17 +43,22 @@ struct Vertex
 layout (binding = 0) uniform RenderSettingsBuffer {
   uint width;
   uint height;
+  uint instanceCount;
 } RenderSettings;
 
-layout (set = 0, binding = 1, std430) readonly buffer BVHNodeBuffer {
+layout (set = 0, binding = 1, std430) readonly buffer InstanceBuffer {
+  Instance instances[];
+};
+
+layout (set = 0, binding = 2, std430) readonly buffer BVHNodeBuffer {
   BVHNode nodes[];
 };
 
-layout (set = 0, binding = 2, std430) readonly buffer IndexBuffer {
+layout (set = 0, binding = 3, std430) readonly buffer IndexBuffer {
   uint indices[];
 };
 
-layout (set = 0, binding = 3, std430) readonly buffer VertexBuffer {
+layout (set = 0, binding = 4, std430) readonly buffer VertexBuffer {
   Vertex vertices[];
 };
 
@@ -157,31 +169,35 @@ void main()
   intersection.dist = MAX_FLOAT;
 
   bool inter = false;
-  uint nextIndex = 0;
 
-  while (nextIndex != 0xFFFFFFFF)
+  for (uint i = 0; i < RenderSettings.instanceCount; ++i)
   {
-    BVHNode node = nodes[nextIndex];
+    Instance instance = instances[i];
+    uint nextIndex = instance.bvhRootIndex;
+    while (nextIndex != 0xFFFFFFFF)
+    {
+      BVHNode node = nodes[nextIndex];
 
-    // Node is a leaf.
-    if (node.primitiveStartIndex != 0xFFFFFFFF)
-    {
-      if (intersectTriangle(ray, node.primitiveStartIndex, tmpIntersection))
+      // Node is a leaf.
+      if (node.primitiveStartIndex != 0xFFFFFFFF)
       {
-        if (tmpIntersection.dist < intersection.dist)
+        if (intersectTriangle(ray, node.primitiveStartIndex, tmpIntersection))
         {
-          intersection = tmpIntersection;
+          if (tmpIntersection.dist < intersection.dist)
+          {
+            intersection = tmpIntersection;
+          }
         }
+        nextIndex = node.nextNodeIndex;
       }
-      nextIndex = node.nextNodeIndex;
-    }
-    else if (!intersectAABB(ray, node.min, node.max))
-    {
-      nextIndex = node.nextNodeIndex;
-    }
-    else
-    {
-      nextIndex++;
+      else if (!intersectAABB(ray, node.min, node.max))
+      {
+        nextIndex = node.nextNodeIndex;
+      }
+      else
+      {
+        nextIndex++;
+      }
     }
   }
 
