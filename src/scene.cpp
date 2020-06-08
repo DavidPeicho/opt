@@ -124,10 +124,10 @@ Scene::deleteInstance(const Entity& entity)
 // TODO: improve API by letting user set the instanc with the mesh?
 // TODO: not great API here, because the BVH **has** to be built before calling this method.
 Scene&
-Scene::addRenderable(const Entity& entity, size_t meshIndex)
+Scene::addRenderable(const Entity& entity, size_t meshIndex, size_t materialId)
 {
   Renderable r;
-  r.materialIndex = 0;
+  r.materialIndex = materialId;
   r.meshIndex = meshIndex;
   m_renderables.createComponent(entity, std::move(r));
   return *this;
@@ -154,6 +154,13 @@ Scene::addMeshes(const std::vector<Mesh::MeshPtr>& meshes)
 {
   // TODO: replace by a mesh to BVH tracking.
   for (const auto& m: meshes) { m_meshes.emplace_back(m); }
+  return *this;
+}
+
+Scene&
+Scene::addMaterial(Material&& material)
+{
+  m_materials.emplace_back(std::move(material));
   return *this;
 }
 
@@ -244,11 +251,11 @@ Scene&
 Scene::update()
 {
   // TODO: update only when dirty.
-  m_transformManager.computeWorldTransforms();
+  m_transforms.computeWorldTransforms();
 
   const auto& renderableComponents = m_renderables.components();
   const auto& renderableEntities = m_renderables.entities();
-  m_instances.resize(renderableEntities.capacity());
+  m_instances.resize(renderableEntities.size());
   for (size_t i = 0; i < renderableComponents.size(); ++i)
   {
     const auto& data = renderableComponents[i];
@@ -256,21 +263,29 @@ Scene::update()
     auto& gpuInstance = m_instances[i];
 
     // TODO: adding the bvhRoot on each update shouldn't be needed.
-    gpuInstance.bvhRootIndex = m_nodes.entries[data.meshIndex];
     gpuInstance.materialIndex = data.materialIndex;
+    gpuInstance.bvhRootIndex = m_nodes.entries[data.meshIndex];
 
-    const auto transformData = m_transformManager.getWorldMatrix(entity);
+    const auto transformData = m_transforms.getWorldMatrix(entity);
     if (transformData)
     {
       gpuInstance.modelToWorld = *transformData;
     }
   }
 
+  #if 1
   for (const auto& i: m_instances)
   {
     std::cout << "instances" << std::endl;
     std::cout << glm::to_string(i.modelToWorld) << std::endl;
   }
+
+  std::cout << "Materials per instance" << std::endl;
+  for (const auto& i: m_instances)
+  {
+    std::cout << glm::to_string(m_materials[i.materialIndex].color) << std::endl;
+  }
+  #endif
 
   return *this;
 }

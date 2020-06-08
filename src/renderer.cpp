@@ -61,7 +61,7 @@ Renderer::init(const Scene& scene)
   WGPUShaderModuleId vertexShader = wgpu_device_create_shader_module(m_deviceId, &vertexModuleDescriptor);
   WGPUShaderModuleId fragmentShader = wgpu_device_create_shader_module(m_deviceId, &fragmentModuleDescriptor);
 
-  const WGPUBindGroupLayoutEntry layoutEntries[5] = {
+  const WGPUBindGroupLayoutEntry layoutEntries[6] = {
     {
         .binding = 0,
         .visibility = WGPUShaderStage_FRAGMENT,
@@ -87,12 +87,17 @@ Renderer::init(const Scene& scene)
         .visibility = WGPUShaderStage_FRAGMENT,
         .ty = WGPUBindingType_ReadonlyStorageBuffer
     },
+    {
+        .binding = 5,
+        .visibility = WGPUShaderStage_FRAGMENT,
+        .ty = WGPUBindingType_ReadonlyStorageBuffer
+    },
   };
 
   WGPUBindGroupLayoutDescriptor bindLayoutGroupDesriptor {
       .label = "bind group layout",
       .entries = layoutEntries,
-      .entries_length = 5,
+      .entries_length = 6,
   };
 
   WGPUBindGroupLayoutId bindLayoutGroupId = wgpu_device_create_bind_group_layout(m_deviceId, &bindLayoutGroupDesriptor);
@@ -120,6 +125,9 @@ Renderer::init(const Scene& scene)
   m_nodesBuffer.create(m_deviceId, scene.m_nodes.data);
   m_vertexBuffer.create(m_deviceId, scene.m_vertices.data);
   m_indicesBuffer.create(m_deviceId, scene.m_indices.data);
+  m_materialBuffer.create(m_deviceId, scene.m_materials);
+
+  // TODO: create a method to generate binding resource from a buffer.
 
   WGPUBindingResource uniformResource = {
     .tag = WGPUBindingResource_Buffer,
@@ -166,6 +174,15 @@ Renderer::init(const Scene& scene)
       }
   };
 
+  WGPUBindingResource materialResource = {
+    .tag = WGPUBindingResource_Buffer,
+      .buffer = (WGPUBufferBinding) {
+          .buffer = m_materialBuffer.id(),
+          .size = m_materialBuffer.getByteSize(),
+          .offset = 0
+      }
+  };
+
   m_bindGroup.setEntry(WGPUBindGroupEntry {
       .binding = 0,
 			.resource = uniformResource
@@ -186,6 +203,10 @@ Renderer::init(const Scene& scene)
       .binding = 4,
 			.resource = vertexResource
   }, 4);
+    m_bindGroup.setEntry(WGPUBindGroupEntry {
+      .binding = 5,
+			.resource = materialResource
+  }, 5);
 
   m_bindGroup.create(m_deviceId, bindLayoutGroupId);
 

@@ -5,9 +5,11 @@
 
 #include <type_traits>
 
+#include <albedo/components/material.h>
 #include <albedo/components/transform.h>
 #include <albedoloader/gltf-loader.h>
 
+#include <glm/common.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/string_cast.hpp>
@@ -83,6 +85,7 @@ GLTFLoader::load(const std::string& path)
 
   std::cout << "NB SCENES " << model.scenes.size() << std::endl;
 
+  processMaterials(result, model);
   processMeshes(result, model);
 
   // TODO: remove when ressource are refactored out of the scene.
@@ -90,14 +93,17 @@ GLTFLoader::load(const std::string& path)
 
   if (model.scenes.size() == 0) {
     std::cout << model.nodes.size() << std::endl;
-    for (const auto& node: model.nodes) {
+    for (const auto& node: model.nodes)
+    {
       processNode(result, node, model);
     }
     return std::make_optional(std::move(result));
   }
 
-  for (const auto& glTFScene: model.scenes) {
-    for (const auto nodeIndex: glTFScene.nodes) {
+  for (const auto& glTFScene: model.scenes)
+  {
+    for (const auto nodeIndex: glTFScene.nodes)
+    {
       const auto& node = model.nodes[nodeIndex];
       processNode(result, node, model);
     }
@@ -107,8 +113,21 @@ GLTFLoader::load(const std::string& path)
 }
 
 void
+GLTFLoader::processMaterials(Scene& scene, const tinygltf::Model& model)
+{
+  for (const auto& glTFMaterial: model.materials)
+  {
+    const auto& albedo = glTFMaterial.pbrMetallicRoughness.baseColorFactor;
+    Material material;
+    material.color = glm::vec4(albedo[0], albedo[1], albedo[2], albedo[3]);
+    scene.addMaterial(std::move(material));
+  }
+}
+
+void
 GLTFLoader::processMeshes(Scene& scene, const tinygltf::Model& model)
 {
+  // TODO: add support for primitive and material...
   for (const auto& gltfMesh: model.meshes)
   {
     Mesh mesh;
@@ -180,7 +199,7 @@ GLTFLoader::processNode(
 
   std::cout << "Processing node " << scene.data<InstanceData>(entity)->name << std::endl;
 
-  auto& transforms = scene.getTransformManager();
+  auto& transforms = scene.transforms();
   components::Transform transform;
 
   // Process transform.
@@ -208,7 +227,9 @@ GLTFLoader::processNode(
 
   if (node.mesh >= 0)
   {
-    scene.addRenderable(entity, node.mesh);
+    // TODO: add support for primitive and material...
+    const auto& mesh = model.meshes[node.mesh];
+    scene.addRenderable(entity, node.mesh, mesh.primitives[0].material);
   }
 
   // Traverse graph.

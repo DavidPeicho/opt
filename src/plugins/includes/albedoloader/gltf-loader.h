@@ -32,6 +32,9 @@ class GLTFLoader
   private:
 
     void
+    processMaterials(Scene& scene, const tinygltf::Model& model);
+
+    void
     processMeshes(Scene& scene, const tinygltf::Model& model);
 
     Entity

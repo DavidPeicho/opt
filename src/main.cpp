@@ -97,7 +97,7 @@ int main() {
   std::cout << "Loading scene..." << std::endl;
 
   albedo::loader::GLTFLoader loader;
-  auto sceneOptional = loader.load("../box.glb");
+  auto sceneOptional = loader.load("../cornell-box.glb");
   if (!sceneOptional)
   {
     std::cerr << "Failed to load scene" << std::endl;
@@ -106,7 +106,7 @@ int main() {
 
   std::cout << "Scene loaded!" << std::endl;
 
-  auto& scene = sceneOptional.value();
+  auto& scene = *sceneOptional;
 
   std::cout << "Building scene...." << std::endl;
   scene.build();

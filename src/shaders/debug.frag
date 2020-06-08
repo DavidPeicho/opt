@@ -7,6 +7,8 @@
 #define TO_RAD_F (PI_F / 180.0)
 #define MAX_FLOAT 3.402823466e+38
 
+#define INVALID_UINT 0xFFFFFFFF
+
 // TODO: move to intersection pass.
 struct Ray {
   vec3 origin;
@@ -43,6 +45,11 @@ struct Vertex
   uint padding_1;
 };
 
+struct Material
+{
+  vec4 albedo;
+};
+
 layout (binding = 0) uniform RenderSettingsBuffer {
   uint width;
   uint height;
@@ -63,6 +70,10 @@ layout (set = 0, binding = 3, std430) readonly buffer IndexBuffer {
 
 layout (set = 0, binding = 4, std430) readonly buffer VertexBuffer {
   Vertex vertices[];
+};
+
+layout (set = 0, binding = 5, std430) readonly buffer MaterialBuffer {
+  Material materials[];
 };
 
 layout(location = 0) out vec4 outColor;
@@ -118,7 +129,7 @@ intersectTriangle(Ray ray, uint startIndex, inout Intersection intersection)
   float det = dot(e1, p);
 
   // Ray is parralel to edge.
-  if (det <= - EPSILON) { return false; }
+  // if (det <= - EPSILON) { return false; }
   if (abs(det) < EPSILON) { return false; }
 
   float invDet = 1.0 / det;
@@ -164,7 +175,7 @@ intersectAABB(Ray ray, vec3 aabbMin, vec3 aabbMax)
 void main()
 {
   Ray ray = generateRay();
-  ray.origin.z = 4.0;
+  ray.origin.z = 10.0;
 
   vec4 color = vec4(0.0, 0.0, 0.0, 0.0);
 
@@ -174,23 +185,24 @@ void main()
   Intersection intersection;
   intersection.dist = MAX_FLOAT;
 
-  bool inter = false;
+  uint materialIndex = INVALID_UINT;
 
   for (uint i = 0; i < RenderSettings.instanceCount; ++i)
   {
     Instance instance = instances[i];
     uint nextIndex = instance.bvhRootIndex;
-    while (nextIndex != 0xFFFFFFFF)
+    while (nextIndex != INVALID_UINT)
     {
       BVHNode node = nodes[nextIndex];
 
       // Node is a leaf.
-      if (node.primitiveStartIndex != 0xFFFFFFFF)
+      if (node.primitiveStartIndex != INVALID_UINT)
       {
         if (intersectTriangle(ray, node.primitiveStartIndex, tmpIntersection))
         {
           if (tmpIntersection.dist < intersection.dist)
           {
+            materialIndex = instance.materialIndex;
             intersection = tmpIntersection;
           }
         }
@@ -216,6 +228,9 @@ void main()
     vec3 n1 = getVertex(intersection.index + 1).normal;
     vec3 n2 = getVertex(intersection.index + 2).normal;
     vec3 normal = barycentricW * n0 + uv.x * n1 + uv.y * n2;
-    outColor = vec4(normal, 1.0);
+
+    Material mat = materials[materialIndex];
+    outColor = vec4(mat.albedo.rgb, 1.0);
+    // outColor = vec4(normal, 1.0);
   }
 }

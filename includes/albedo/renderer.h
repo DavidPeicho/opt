@@ -76,7 +76,7 @@ class Renderer
     WGPUSwapChainId m_swapChainId;
 
     backend::RenderPipeline m_renderPipeline;
-    backend::BindGroup<5> m_bindGroup;
+    backend::BindGroup<6> m_bindGroup;
     WGPUCommandEncoderId m_commandEncoder; // TODO: refactor out?
 
     backend::Buffer<RenderInfo> m_renderInfoBuffer;
@@ -84,6 +84,7 @@ class Renderer
     backend::Buffer<InstanceGPU> m_instanceBuffer;
     backend::Buffer<Vertex> m_vertexBuffer;
     backend::Buffer<Mesh::IndexType> m_indicesBuffer;
+    backend::Buffer<Material> m_materialBuffer;
 
 };
 

@@ -10,6 +10,7 @@
 #include <glm/glm.hpp>
 #include <albedo/components/component.h>
 #include <albedo/components/component-structure.h>
+#include <albedo/components/material.h>
 #include <albedo/components/transform.h>
 #include <albedo/entity.h>
 #include <albedo/material.h>
@@ -83,7 +84,6 @@ struct InstanceGPU
   uint32_t materialIndex;
 };
 
-// TODO: template over `InstanceData` to accept extending that.
 // TODO: add method to synchronize resources. What happens if the layout
 // of the ResourceManager changes, we need to sync everything.
 class Scene
@@ -116,10 +116,16 @@ class Scene
     Scene&
     addMeshes(const std::vector<Mesh::MeshPtr>& meshes);
 
+    Scene&
+    addMaterial(Material&& material);
+
+    // TODO: remove material.
+
     // TODO: expose a renderable manager directly.
     // TODO: improve API by letting user set the instanc with the mesh?
+    // TODO: improve the API with the material index
     Scene&
-    addRenderable(const Entity&, size_t meshIndex);
+    addRenderable(const Entity&, size_t meshIndex, size_t materialIndex);
 
     // TODO: expose a renderable manager directly.
     Scene&
@@ -133,22 +139,32 @@ class Scene
 
   public:
 
+    // TODO: improve material API.
+    // Right now, it's hard to use, and hard not to make mistakes...
+    // When removing a material what happens to the entity pointing to it?
+    inline Material&
+    getMaterial(size_t index)
+    {
+      return m_materials[index];
+    }
+
     template <typename T>
     OptionalRef<T>
     data(const Entity&);
 
     inline TransformManager&
-    getTransformManager() { return m_transformManager; }
+    transforms() { return m_transforms; }
 
   private:
     ComponentArray<InstanceData> m_data;
     ComponentArray<Renderable> m_renderables;
 
-    TransformManager m_transformManager;
+    TransformManager m_transforms;
 
     std::vector<Mesh::MeshPtr> m_meshes;
-    std::vector<InstanceGPU> m_instances;
 
+    std::vector<InstanceGPU> m_instances;
+    std::vector<Material> m_materials;
     EntryOffsetTable<Vertex> m_vertices; // Vertices of **all** BVH.
     EntryOffsetTable<Mesh::IndexType> m_indices; // Indices of **all** BVH.
     EntryOffsetTable<BVHNodeGPU> m_nodes; // Nodes of all BVH.

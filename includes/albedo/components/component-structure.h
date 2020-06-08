@@ -24,6 +24,14 @@ class ComponentArray
 
   public:
 
+    ComponentArray() noexcept = default;
+
+    ComponentArray(const ComponentArray&) = delete;
+
+    ComponentArray(ComponentArray&&) noexcept = default;
+
+  public:
+
     ComponentId
     createComponent(const Entity& entity, DataType&& data);
 
