@@ -122,9 +122,9 @@ Renderer::init(const Scene& scene)
   m_renderInfoBuffer.create(m_deviceId);
 
   m_instanceBuffer.create(m_deviceId, scene.m_instances);
-  m_nodesBuffer.create(m_deviceId, scene.m_nodes.data);
-  m_vertexBuffer.create(m_deviceId, scene.m_vertices.data);
-  m_indicesBuffer.create(m_deviceId, scene.m_indices.data);
+  m_nodesBuffer.create(m_deviceId, scene.m_nodes);
+  m_vertexBuffer.create(m_deviceId, scene.m_vertices);
+  m_indicesBuffer.create(m_deviceId, scene.m_indices);
   m_materialBuffer.create(m_deviceId, scene.m_materials);
 
   // TODO: create a method to generate binding resource from a buffer.

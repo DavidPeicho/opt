@@ -19,18 +19,14 @@ class FlattenTask {
 
     inline
     FlattenTask(
-      EntryOffsetTable<BVHNodeGPU>& output,
+      std::vector<BVHNodeGPU>& output,
       Mesh::IndexType primitiveIndexStart
     )
       : m_output{output}
-      , m_start(output.data.size())
+      , m_start(output.size())
       , m_curr(m_start)
       , m_primitiveIndexStart(primitiveIndexStart)
-    {
-      // TODO: not super clean... We don't really know who manages what with
-      // this EntryOffsetClass. To refactor.
-      m_output.entries.push_back(m_curr);
-    }
+    { }
 
   public:
 
@@ -49,14 +45,14 @@ class FlattenTask {
     {
       const BVHNode& node = inputs[inputIndex];
 
-      m_output.data.insert(m_output.data.begin() + m_curr, BVHNodeGPU {
+      m_output.insert(m_output.begin() + m_curr, BVHNodeGPU {
         .min = node.aabb.min,
         .max = node.aabb.max,
         .nextNodeIndex = BVHNode::InvalidValue,
         .primitiveStartIndex = BVHNode::InvalidValue
         // .oldIndex = inputIndex
       });
-      auto& resultNode = m_output.data[m_curr];
+      auto& resultNode = m_output[m_curr];
       m_curr++;
 
       if (node.leftChild != BVHNode::InvalidValue)
@@ -97,7 +93,7 @@ class FlattenTask {
 
   private:
 
-    EntryOffsetTable<BVHNodeGPU>& m_output;
+    std::vector<BVHNodeGPU>& m_output;
     Mesh::IndexType m_start;
     Mesh::IndexType m_curr;
     Mesh::IndexType m_primitiveIndexStart;
@@ -188,32 +184,47 @@ Scene::build()
     totalNumberIndices += m->getIndices().size();
   }
 
-  // TODO: need a way to map from mesh to the first index of its data in
-  // the indices, vertices, and nodes array
+  // TODO: clean all of that... it's a mess and not easy to understand.
+  // I would prefer to loose a tiny bit of performance here and get some clean
+  // code easy to understand.
 
-  m_vertices.clear();
-  m_vertices.data.reserve(totalNumberVertices);
-  m_indices.clear();
-  m_indices.data.reserve(totalNumberIndices);
   m_nodes.clear();
-  m_nodes.data.reserve(totalNumberNodes);
+  m_nodes.reserve(totalNumberNodes);
+  m_vertices.clear();
+  m_vertices.reserve(totalNumberVertices);
+  m_indices.clear();
+  m_indices.resize(totalNumberIndices);
 
+  size_t currIndex = 0;
+  // TODO: parralele for.
+  for (size_t i = 0; i < m_meshes.size(); ++i)
+  {
+    const auto& mesh = *m_meshes[i];
+    const auto& indices = mesh.getIndices();
+    const auto& vertices = mesh.getVertexBuffer();
+    const auto startIndex = m_vertices.size();
+    for (const auto primitive: indices)
+    {
+      m_indices[currIndex++] = primitive + startIndex;
+    }
+    m_vertices.insert(m_vertices.end(), vertices.begin(), vertices.end());
+  }
+
+  // This is needed as well. BVH are already built pointing with nodes
+  // pointing to other. THose node need to have the index updated.
+  size_t startIndex = 0;
   // TODO: parralele for.
   for (size_t i = 0; i < m_meshes.size(); ++i)
   {
     auto& mesh = *m_meshes[i];
     const auto& bvh = mesh.getBVH();
-    const auto& indices = mesh.getIndices();
-    const auto& vertices = mesh.getVertexBuffer();
-
-    m_indices.push(indices);
-    m_vertices.push(vertices);
-
     auto flattenTask = FlattenTask(
       m_nodes,
-      m_vertices.entries[i]
+      startIndex
     );
     flattenTask.flatten(bvh.nodes, bvh.rootIndex);
+
+    startIndex += mesh.getVertexBuffer().size();
   }
 
   #if 0
@@ -262,9 +273,17 @@ Scene::update()
     const auto entity = renderableEntities[i];
     auto& gpuInstance = m_instances[i];
 
-    // TODO: adding the bvhRoot on each update shouldn't be needed.
     gpuInstance.materialIndex = data.materialIndex;
-    gpuInstance.bvhRootIndex = m_nodes.entries[data.meshIndex];
+
+    // TODO: cache the starting point of each BVH root.
+    uint32_t bvhRootIndex = 0;
+    for (size_t i = 0; i < data.meshIndex; ++i)
+    {
+      bvhRootIndex += m_meshes[i]->getBVH().nodes.size();
+    }
+    gpuInstance.bvhRootIndex = bvhRootIndex;
+
+    std::cout << "Root index = " << gpuInstance.bvhRootIndex << std::endl;
 
     const auto transformData = m_transforms.getWorldMatrix(entity);
     if (transformData)

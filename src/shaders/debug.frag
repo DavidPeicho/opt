@@ -26,6 +26,8 @@ struct Instance
   mat4 modelToWorld;
   uint bvhRootIndex;
   uint materialIndex;
+  uint padding_0;
+  uint padding_1;
 };
 
 struct BVHNode
@@ -231,6 +233,7 @@ void main()
 
     Material mat = materials[materialIndex];
     outColor = vec4(mat.albedo.rgb, 1.0);
-    // outColor = vec4(normal, 1.0);
+    outColor = vec4(normal, 1.0);
   }
+
 }

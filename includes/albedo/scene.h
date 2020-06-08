@@ -61,6 +61,20 @@ struct EntryOffsetTable
     entries.clear();
   }
 
+  inline typename std::vector<T>::iterator
+  beginEntry(size_t i)
+  {
+    if (i >= entries.size()) { return data.end(); }
+    return data.begin() + entries[i];
+  }
+
+  inline typename std::vector<T>::iterator
+  endEntry(size_t i)
+  {
+    if (i + 1 >= entries.size()) { return data.end(); }
+    return data.begin() + entries[i + 1];
+  }
+
   std::vector<T> data;
   std::vector<uint32_t> entries;
 
@@ -77,11 +91,15 @@ struct BVHNodeGPU
   uint32_t primitiveStartIndex;
 };
 
+// `mat4` structure aligment
+// TODO: use
 struct InstanceGPU
 {
   glm::mat4 modelToWorld;
   uint32_t bvhRootIndex;
   uint32_t materialIndex;
+  uint32_t padding_0;
+  uint32_t padding_1;
 };
 
 // TODO: add method to synchronize resources. What happens if the layout
@@ -165,9 +183,9 @@ class Scene
 
     std::vector<InstanceGPU> m_instances;
     std::vector<Material> m_materials;
-    EntryOffsetTable<Vertex> m_vertices; // Vertices of **all** BVH.
-    EntryOffsetTable<Mesh::IndexType> m_indices; // Indices of **all** BVH.
-    EntryOffsetTable<BVHNodeGPU> m_nodes; // Nodes of all BVH.
+    std::vector<Vertex> m_vertices; // Vertices of **all** BVH.
+    std::vector<Mesh::IndexType> m_indices; // Indices of **all** BVH.
+    std::vector<BVHNodeGPU> m_nodes; // Nodes of all BVH.
 };
 
 template <typename T>
