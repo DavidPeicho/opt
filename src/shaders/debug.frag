@@ -4,10 +4,14 @@
 #define EPSILON1 1.000001
 
 #define PI_F 3.14159265359
+#define TWO_PI 6.28318530718
 #define TO_RAD_F (PI_F / 180.0)
 #define MAX_FLOAT 3.402823466e+38
 
-#define INVALID_UINT 0xFFFFFFFF
+#define VEC3_UP vec3(0.0, 1.0, 0.0)
+
+#define MAX_UINT 0xFFFFFFFF
+#define INVALID_UINT MAX_UINT
 
 // TODO: move to intersection pass.
 struct Ray {
@@ -17,8 +21,8 @@ struct Ray {
 
 struct Intersection {
   vec2 uv;
-  float dist;
   uint index;
+  uint materialIndex;
 };
 
 struct Instance
@@ -80,6 +84,64 @@ layout (set = 0, binding = 5, std430) readonly buffer MaterialBuffer {
 
 layout(location = 0) out vec4 outColor;
 
+uint gRandState;
+
+/* Utils */
+
+uint
+WangHash(inout uint seed)
+{
+  seed = uint(seed ^ uint(61)) ^ uint(seed >> uint(16));
+  seed *= uint(9);
+  seed = seed ^ (seed >> 4);
+  seed *= uint(0x27d4eb2d);
+  seed = seed ^ (seed >> 15);
+  return seed;
+}
+
+float rand(inout uint seed)
+{
+  return float(WangHash(seed)) / float(MAX_UINT);
+}
+
+vec3
+transformDirection(vec3 direction, mat4 transform)
+{
+  return normalize((transform * vec4(direction, 0.0)).xyz);
+}
+
+// Implementation of Hammersley Points on the Hemisphere
+vec3
+randomCosineWeightedVector(uint seed)
+{
+  // To avoid to use a second sine and a normalization, it's possible to
+  // use directly the random number in [0.0; 1.0] and scale the generated
+  // `x` and `z` coordinates by it to obtain a normalized vector.
+  // The code below is equivalent to:
+  //   x = cos(theta), y = sin(phi), z = sin(theta);
+  //   normalize(x, y, z);
+
+  float theta = rand(seed) * TWO_PI;
+  float r = rand(seed);
+  float rLen = sqrt(1.0 - r);
+
+  float z = sqrt(r); // weights the samples to tend the normal
+  float x = cos(theta) * rLen; // weights the x value to preserve normalization
+  float y = sin(theta) * rLen; // weights the y value to preserve normalization
+  return vec3(x, y, z);
+}
+
+/* Shading */
+
+float LambertBRDF()
+{
+  return 1.0 / PI_F;
+}
+
+
+
+/* Intersection */
+
 Vertex
 getVertex(uint index)
 {
@@ -115,8 +177,8 @@ generateRay()
 
 // Implementation of:
 // Möller, Tomas; Trumbore, Ben (1997). "Fast, Minimum Storage Ray-Triangle Intersection"
-bool
-intersectTriangle(Ray ray, uint startIndex, inout Intersection intersection)
+float
+intersectTriangle(Ray ray, uint startIndex, inout vec2 uv)
 {
   // TODO: pre-process edge?
   // Maybe not really useful if decide to add skinning in shader.
@@ -132,7 +194,7 @@ intersectTriangle(Ray ray, uint startIndex, inout Intersection intersection)
 
   // Ray is parralel to edge.
   // if (det <= - EPSILON) { return false; }
-  if (abs(det) < EPSILON) { return false; }
+  if (abs(det) < EPSILON) { return MAX_FLOAT; }
 
   float invDet = 1.0 / det;
 
@@ -140,17 +202,14 @@ intersectTriangle(Ray ray, uint startIndex, inout Intersection intersection)
   vec3 centered = ray.origin - v0;
 
   float u = dot(centered, p) * invDet;
-  if (u < EPSILON || u > EPSILON1) { return false; }
+  if (u < EPSILON || u > EPSILON1) { return MAX_FLOAT; }
 
   vec3 q = cross(centered, e1);
   float v = dot(ray.dir, q) * invDet;
-  if (v < EPSILON || u + v > EPSILON1) { return false; }
+  if (v < EPSILON || u + v > EPSILON1) { return MAX_FLOAT; }
 
-  intersection.uv = vec2(u, v);
-  intersection.dist = dot(e2, q) * invDet;
-  intersection.index = startIndex;
-
-  return true;
+  uv = vec2(u, v);
+  return dot(e2, q) * invDet;
 }
 
 bool
@@ -174,19 +233,11 @@ intersectAABB(Ray ray, vec3 aabbMin, vec3 aabbMax)
   return smallestMax > largestMin;
 }
 
-void main()
+float
+computeClosestHit(Ray ray, inout Intersection intersection)
 {
-  Ray ray = generateRay();
-  ray.origin.z = 10.0;
-
-  vec4 color = vec4(0.0, 0.0, 0.0, 0.0);
-
-  Intersection tmpIntersection;
-  tmpIntersection.dist = -1.0;
-
-  Intersection intersection;
-  intersection.dist = MAX_FLOAT;
-
+  float dist = MAX_FLOAT;
+  vec2 uv = vec2(0.0);
   uint materialIndex = INVALID_UINT;
 
   for (uint i = 0; i < RenderSettings.instanceCount; ++i)
@@ -200,13 +251,13 @@ void main()
       // Node is a leaf.
       if (node.primitiveStartIndex != INVALID_UINT)
       {
-        if (intersectTriangle(ray, node.primitiveStartIndex, tmpIntersection))
+        float t = intersectTriangle(ray, node.primitiveStartIndex, uv);
+        if (t < dist)
         {
-          if (tmpIntersection.dist < intersection.dist)
-          {
-            materialIndex = instance.materialIndex;
-            intersection = tmpIntersection;
-          }
+          intersection.uv = uv;
+          intersection.index = node.primitiveStartIndex;
+          intersection.materialIndex = instance.materialIndex;
+          dist = t;
         }
         nextIndex = node.nextNodeIndex;
       }
@@ -220,20 +271,51 @@ void main()
       }
     }
   }
+  return dist;
+}
+
+void main()
+{
+  gRandState = (uint(fragCoord.x) * uint(1973) + uint(fragCoord.y) * uint(9277)) | uint(1);
+
+  Ray ray = generateRay();
+  ray.origin.z = 10.0;
 
   outColor = vec4(vec3(0.0), 1.0);
 
-  if (intersection.dist < MAX_FLOAT) {
-    vec2 uv = intersection.uv;
-    float barycentricW = 1.0 - uv.x - uv.y;
-    vec3 n0 = getVertex(intersection.index).normal;
-    vec3 n1 = getVertex(intersection.index + 1).normal;
-    vec3 n2 = getVertex(intersection.index + 2).normal;
-    vec3 normal = barycentricW * n0 + uv.x * n1 + uv.y * n2;
+  Intersection intersection;
+  for (uint bounces = 0; bounces < 2; ++bounces)
+  {
+    float t = computeClosestHit(ray, intersection);
+    if (t != MAX_FLOAT)
+    {
+      vec2 uv = intersection.uv;
+      float barycentricW = 1.0 - uv.x - uv.y;
+      vec3 n0 = getVertex(intersection.index).normal;
+      vec3 n1 = getVertex(intersection.index + 1).normal;
+      vec3 n2 = getVertex(intersection.index + 2).normal;
+      vec3 normal = barycentricW * n0 + uv.x * n1 + uv.y * n2;
 
-    Material mat = materials[materialIndex];
-    outColor = vec4(mat.albedo.rgb, 1.0);
-    outColor = vec4(normal, 1.0);
+      // 𝐿𝑟 𝛚𝑟 ≈ 𝑁 𝑓𝑟 𝛚𝑖,𝛚𝑟 𝐿𝑖 𝛚𝑖 cos𝜃𝑖⁡
+
+      // We sample in a cosine weighted hemisphere, so basially we remove
+      // the 2PI term and the multiplication by cos(𝜃) as the samples are already
+      // sampled in a cosine hemisphere.
+
+      // Bounce
+
+      vec3 tangent = cross(normal, VEC3_UP);
+      vec3 bitangent = cross(normal, right);
+
+      // Diffuse bounce.
+      vec3 dir = randomCosineWeightedVector(gRandState);
+      ray.origin = t * ray.dir;
+      ray.dir = normalize(tangent * dir.x + bitangent * dir.y + dir.z * normal);
+
+      // Material mat = materials[intersection.materialIndex];
+      // outColor = vec4(mat.albedo.rgb, 1.0);
+      // outColor = vec4(normal, 1.0);
+    }
   }
 
 }
