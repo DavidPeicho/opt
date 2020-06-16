@@ -20,9 +20,17 @@ struct Ray {
 };
 
 struct Intersection {
+  vec3 emissive;
+  uint materialIndex;
   vec2 uv;
   uint index;
-  uint materialIndex;
+  bool emitter;
+};
+
+struct BRDFSample
+{
+  float pdf;
+  vec3 dir;
 };
 
 struct Instance
@@ -82,9 +90,7 @@ layout (set = 0, binding = 5, std430) readonly buffer MaterialBuffer {
   Material materials[];
 };
 
-layout(location = 0) out vec4 outColor;
-
-uint gRandState;
+layout(location = 0) out vec4 radiance;
 
 /* Utils */
 
@@ -101,7 +107,7 @@ WangHash(inout uint seed)
 
 float rand(inout uint seed)
 {
-  return float(WangHash(seed)) / float(MAX_UINT);
+  return float(WangHash(seed)) / 4294967296.0;
 }
 
 vec3
@@ -112,7 +118,7 @@ transformDirection(vec3 direction, mat4 transform)
 
 // Implementation of Hammersley Points on the Hemisphere
 vec3
-randomCosineWeightedVector(uint seed)
+randomCosineWeightedVector(inout uint seed)
 {
   // To avoid to use a second sine and a normalization, it's possible to
   // use directly the random number in [0.0; 1.0] and scale the generated
@@ -131,21 +137,27 @@ randomCosineWeightedVector(uint seed)
   return vec3(x, y, z);
 }
 
-/* Shading */
-
-float LambertBRDF()
-{
-  return 1.0 / PI_F;
-}
-
-
-
 /* Intersection */
 
 Vertex
 getVertex(uint index)
 {
   return vertices[indices[index]];
+}
+
+/* Shading */
+
+BRDFSample
+LambertBRDF(vec3 normal, inout uint randState)
+{
+  vec3 tangent = cross(normal, VEC3_UP);
+  vec3 bitangent = cross(normal, tangent);
+  vec3 localDir = randomCosineWeightedVector(randState);
+
+  BRDFSample brdf;
+  brdf.dir = normalize(tangent * localDir.x + bitangent * localDir.y + localDir.z * normal);
+  brdf.pdf = 0.5; // Should be PI/2 but cancels out with cosine sampling.
+  return brdf;
 }
 
 // TODO: move to intersection pass.
@@ -170,6 +182,26 @@ generateRay()
   ray.dir = normalize(ray.dir);
 
   return ray;
+}
+
+float
+intersectPlane(Ray ray, vec3 normal, vec3 origin, vec3 edge01, vec3 edge02)
+{
+  float NdotD = dot(normal, ray.dir);
+  if (NdotD < EPSILON) { return MAX_FLOAT; }
+
+  float t = dot(normal, origin - ray.origin) / NdotD;
+  if (t < EPSILON) { return MAX_FLOAT; }
+
+  vec3 intersection = (ray.origin + ray.dir * t) - origin;
+
+  // Check not before first edge.
+  float interProj = dot(edge01, intersection);
+  if (interProj < EPSILON || interProj > dot(edge01, edge01)) { return MAX_FLOAT; }
+
+  interProj = dot(edge02, intersection);
+  if (interProj < EPSILON || interProj > dot(edge02, edge02)) { return MAX_FLOAT; }
+  return t;
 }
 
 // TODO: implement watertight version of Ray-Triangle intersection, available
@@ -234,11 +266,34 @@ intersectAABB(Ray ray, vec3 aabbMin, vec3 aabbMax)
 }
 
 float
-computeClosestHit(Ray ray, inout Intersection intersection)
+sceneHit(Ray ray, inout Intersection intersection)
 {
   float dist = MAX_FLOAT;
   vec2 uv = vec2(0.0);
   uint materialIndex = INVALID_UINT;
+
+  // DEBUG with one area light
+  #if 1
+  float xLen = 3.0;
+  float zLen = 1.0;
+  vec3 normal = vec3(.0, -1., 0.);
+  vec3 bitangent = vec3(0.0, 0.0, -1.0) * zLen;
+  vec3 tangent = vec3(1.0, 0.0, 0.0) * xLen;
+  vec3 o = vec3(0.0, 3.0, 0.0) - 0.5 * tangent - 0.5 * bitangent;
+  // ray, normal, origin, edge0, edge1
+  dist = intersectPlane(
+    ray,
+    - normal,
+    o,
+    tangent,
+    bitangent
+  );
+  if (dist < MAX_FLOAT)
+  {
+    intersection.emissive = vec3(1.0, 0.9, 0.8) * 30.0;
+    intersection.emitter = true;
+  }
+  #endif
 
   for (uint i = 0; i < RenderSettings.instanceCount; ++i)
   {
@@ -257,6 +312,7 @@ computeClosestHit(Ray ray, inout Intersection intersection)
           intersection.uv = uv;
           intersection.index = node.primitiveStartIndex;
           intersection.materialIndex = instance.materialIndex;
+          intersection.emitter = false;
           dist = t;
         }
         nextIndex = node.nextNodeIndex;
@@ -276,19 +332,33 @@ computeClosestHit(Ray ray, inout Intersection intersection)
 
 void main()
 {
-  gRandState = (uint(fragCoord.x) * uint(1973) + uint(fragCoord.y) * uint(9277)) | uint(1);
+  uint randState = (uint(gl_FragCoord.x) * uint(1973) + uint(gl_FragCoord.y) * uint(9277)) | uint(1);
 
   Ray ray = generateRay();
   ray.origin.z = 10.0;
 
-  outColor = vec4(vec3(0.0), 1.0);
+  vec3 throughput = vec3(1.0);
+  radiance = vec4(vec3(0.0), 1.0);
+
+  uint maxBounces = 2;
 
   Intersection intersection;
-  for (uint bounces = 0; bounces < 2; ++bounces)
+  for (uint bounces = 0; bounces < maxBounces; ++bounces)
   {
-    float t = computeClosestHit(ray, intersection);
+    intersection.emissive = vec3(0.0);
+    intersection.emitter = false;
+
+    float t = sceneHit(ray, intersection);
     if (t != MAX_FLOAT)
     {
+      radiance.rgb += throughput * intersection.emissive;
+
+      if (intersection.emitter)
+      {
+        // Sample emitter here.
+        continue;
+      }
+
       vec2 uv = intersection.uv;
       float barycentricW = 1.0 - uv.x - uv.y;
       vec3 n0 = getVertex(intersection.index).normal;
@@ -301,20 +371,16 @@ void main()
       // We sample in a cosine weighted hemisphere, so basially we remove
       // the 2PI term and the multiplication by cos(𝜃) as the samples are already
       // sampled in a cosine hemisphere.
+      BRDFSample brdf = LambertBRDF(normal, randState);
 
-      // Bounce
-
-      vec3 tangent = cross(normal, VEC3_UP);
-      vec3 bitangent = cross(normal, right);
+      Material mat = materials[intersection.materialIndex];
+      vec3 directRadiance = mat.albedo.rgb * brdf.pdf;
+      throughput *= directRadiance;
 
       // Diffuse bounce.
-      vec3 dir = randomCosineWeightedVector(gRandState);
-      ray.origin = t * ray.dir;
-      ray.dir = normalize(tangent * dir.x + bitangent * dir.y + dir.z * normal);
-
-      // Material mat = materials[intersection.materialIndex];
-      // outColor = vec4(mat.albedo.rgb, 1.0);
-      // outColor = vec4(normal, 1.0);
+      ray.origin += t * ray.dir + EPSILON * normal;
+      ray.dir = brdf.dir;
+      radiance.rgb = - brdf.dir;
     }
   }
 
