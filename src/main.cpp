@@ -44,14 +44,22 @@ void render(albedo::Renderer& renderer)
 {
   int width = 0;
   int height = 0;
+
+  float lastTime = glfwGetTime();
+  float delta = 0.0;
   while (!glfwWindowShouldClose(window))
   {
+    float time = glfwGetTime();
+    delta = time - lastTime;
+
     glfwGetWindowSize(window, &width, &height);
     // Resize if needed.
     renderer.resize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
-    renderer.startFrame();
+    renderer.startFrame(delta);
     renderer.endFrame();
     glfwPollEvents();
+
+    lastTime = time;
   }
 }
 

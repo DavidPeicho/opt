@@ -8,7 +8,7 @@
 #define TO_RAD_F (PI_F / 180.0)
 #define MAX_FLOAT 3.402823466e+38
 
-#define VEC3_UP vec3(0.0, 1.0, 0.0)
+#define VEC3_UP vec3(EPSILON, 1.0, EPSILON)
 
 #define MAX_UINT 0xFFFFFFFF
 #define INVALID_UINT MAX_UINT
@@ -89,6 +89,10 @@ layout (set = 0, binding = 4, std430) readonly buffer VertexBuffer {
 layout (set = 0, binding = 5, std430) readonly buffer MaterialBuffer {
   Material materials[];
 };
+
+layout (set = 0, binding = 6) uniform UniformsBuffer {
+  float iFrame;
+} Uniforms;
 
 layout(location = 0) out vec4 radiance;
 
@@ -332,7 +336,13 @@ sceneHit(Ray ray, inout Intersection intersection)
 
 void main()
 {
-  uint randState = (uint(gl_FragCoord.x) * uint(1973) + uint(gl_FragCoord.y) * uint(9277)) | uint(1);
+  uint randState = (
+    uint(gl_FragCoord.x) * uint(1973)
+    + uint(gl_FragCoord.y) * uint(9277)
+    + uint(Uniforms.iFrame) * uint(26699)
+  ) | uint(1);
+
+  randState += 2478;
 
   Ray ray = generateRay();
   ray.origin.z = 10.0;
@@ -380,7 +390,8 @@ void main()
       // Diffuse bounce.
       ray.origin += t * ray.dir + EPSILON * normal;
       ray.dir = brdf.dir;
-      radiance.rgb = - brdf.dir;
+      radiance.rgb = brdf.dir;
+      break;
     }
   }
 

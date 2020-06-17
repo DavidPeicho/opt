@@ -21,6 +21,10 @@ struct RenderInfo {
   uint pad_0;
 };
 
+struct Uniforms {
+  float time;
+};
+
 // TODO: add PIML? is it worth for people to access internal WGPU wrapper?
 class Renderer
 {
@@ -51,7 +55,7 @@ class Renderer
     resize(uint32_t width, uint32_t height);
 
     Renderer&
-    startFrame();
+    startFrame(float deltaTime);
 
     Renderer&
     endFrame();
@@ -67,6 +71,7 @@ class Renderer
   private:
 
     RenderInfo m_info;
+    Uniforms m_uniforms;
 
     WGPUDeviceId m_deviceId;
     WGPUSurfaceId m_surfaceId;
@@ -76,7 +81,7 @@ class Renderer
     WGPUSwapChainId m_swapChainId;
 
     backend::RenderPipeline m_renderPipeline;
-    backend::BindGroup<6> m_bindGroup;
+    backend::BindGroup<7> m_bindGroup;
     WGPUCommandEncoderId m_commandEncoder; // TODO: refactor out?
 
     backend::Buffer<RenderInfo> m_renderInfoBuffer;
@@ -85,6 +90,7 @@ class Renderer
     backend::Buffer<Vertex> m_vertexBuffer;
     backend::Buffer<Mesh::IndexType> m_indicesBuffer;
     backend::Buffer<Material> m_materialBuffer;
+    backend::Buffer<Uniforms> m_uniformsBuffer;
 
 };
 

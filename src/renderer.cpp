@@ -37,6 +37,7 @@ Renderer::Renderer(
 {
   m_info.width = width;
   m_info.height = height;
+  m_uniforms.time = 0.0;
   m_swapChainDescriptor.usage = WGPUTextureUsage_OUTPUT_ATTACHMENT;
   m_swapChainDescriptor.format = WGPUTextureFormat_Bgra8Unorm;
   m_swapChainDescriptor.present_mode = WGPUPresentMode_Fifo;
@@ -61,7 +62,7 @@ Renderer::init(const Scene& scene)
   WGPUShaderModuleId vertexShader = wgpu_device_create_shader_module(m_deviceId, &vertexModuleDescriptor);
   WGPUShaderModuleId fragmentShader = wgpu_device_create_shader_module(m_deviceId, &fragmentModuleDescriptor);
 
-  const WGPUBindGroupLayoutEntry layoutEntries[6] = {
+  const WGPUBindGroupLayoutEntry layoutEntries[7] = {
     {
         .binding = 0,
         .visibility = WGPUShaderStage_FRAGMENT,
@@ -92,12 +93,17 @@ Renderer::init(const Scene& scene)
         .visibility = WGPUShaderStage_FRAGMENT,
         .ty = WGPUBindingType_ReadonlyStorageBuffer
     },
+    {
+        .binding = 6,
+        .visibility = WGPUShaderStage_FRAGMENT,
+        .ty = WGPUBindingType_UniformBuffer
+    }
   };
 
   WGPUBindGroupLayoutDescriptor bindLayoutGroupDesriptor {
       .label = "bind group layout",
       .entries = layoutEntries,
-      .entries_length = 6,
+      .entries_length = 7,
   };
 
   WGPUBindGroupLayoutId bindLayoutGroupId = wgpu_device_create_bind_group_layout(m_deviceId, &bindLayoutGroupDesriptor);
@@ -127,9 +133,13 @@ Renderer::init(const Scene& scene)
   m_indicesBuffer.create(m_deviceId, scene.m_indices);
   m_materialBuffer.create(m_deviceId, scene.m_materials);
 
+  m_uniformsBuffer.setUsage(WGPUBufferUsage_COPY_DST | WGPUBufferUsage_UNIFORM);
+  m_uniformsBuffer.setSize(1);
+  m_uniformsBuffer.create(m_deviceId);
+
   // TODO: create a method to generate binding resource from a buffer.
 
-  WGPUBindingResource uniformResource = {
+  WGPUBindingResource renderUniformResource = {
     .tag = WGPUBindingResource_Buffer,
       .buffer = (WGPUBufferBinding) {
           .buffer = m_renderInfoBuffer.id(),
@@ -183,9 +193,18 @@ Renderer::init(const Scene& scene)
       }
   };
 
+  WGPUBindingResource uniformResource = {
+    .tag = WGPUBindingResource_Buffer,
+      .buffer = (WGPUBufferBinding) {
+          .buffer = m_uniformsBuffer.id(),
+          .size = m_uniformsBuffer.getByteSize(),
+          .offset = 0
+      }
+  };
+
   m_bindGroup.setEntry(WGPUBindGroupEntry {
       .binding = 0,
-			.resource = uniformResource
+			.resource = renderUniformResource
   }, 0);
   m_bindGroup.setEntry(WGPUBindGroupEntry {
       .binding = 1,
@@ -203,10 +222,14 @@ Renderer::init(const Scene& scene)
       .binding = 4,
 			.resource = vertexResource
   }, 4);
-    m_bindGroup.setEntry(WGPUBindGroupEntry {
+  m_bindGroup.setEntry(WGPUBindGroupEntry {
       .binding = 5,
 			.resource = materialResource
   }, 5);
+  m_bindGroup.setEntry(WGPUBindGroupEntry {
+      .binding = 6,
+			.resource = uniformResource
+  }, 6);
 
   m_bindGroup.create(m_deviceId, bindLayoutGroupId);
 
@@ -246,7 +269,7 @@ Renderer::resize(uint32_t width, uint32_t height)
 }
 
 Renderer&
-Renderer::startFrame()
+Renderer::startFrame(float deltaTime)
 {
   WGPUSwapChainOutput nextSwapTexture = wgpu_swap_chain_get_next_texture(m_swapChainId);
   // TODO: add error handling
@@ -255,6 +278,17 @@ Renderer::startFrame()
     std::cout << "Cant acquire swap chaint texture" << std::endl;
     return *this;
   }
+
+  WGPUQueueId queue = wgpu_device_get_default_queue(m_deviceId);
+
+  m_uniforms.time += 1.0 + deltaTime;
+  wgpu_queue_write_buffer(
+      queue,
+      reinterpret_cast<uint8_t*>(&m_uniforms),
+      sizeof (Uniforms),
+      m_uniformsBuffer.id(),
+      0
+    );
 
   WGPUCommandEncoderDescriptor computeCommandEncoderDescription {
     .label = "command encoder"
