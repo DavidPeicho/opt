@@ -8,7 +8,7 @@
 #define TO_RAD_F (PI_F / 180.0)
 #define MAX_FLOAT 3.402823466e+38
 
-#define VEC3_UP vec3(EPSILON, 1.0, EPSILON)
+#define VEC3_UP vec3(0.0, 0.999999995, 0.0001)
 
 #define MAX_UINT 0xFFFFFFFF
 #define INVALID_UINT MAX_UINT
@@ -133,11 +133,12 @@ randomCosineWeightedVector(inout uint seed)
 
   float theta = rand(seed) * TWO_PI;
   float r = rand(seed);
-  float rLen = sqrt(1.0 - r);
+  float rLen = sqrt(max(EPSILON, 1.0 - r));
 
   float z = sqrt(r); // weights the samples to tend the normal
-  float x = cos(theta) * rLen; // weights the x value to preserve normalization
-  float y = sin(theta) * rLen; // weights the y value to preserve normalization
+  float x = cos(theta) * rLen; // weights to preserve normalization
+  float y = sin(theta) * rLen; // weights to preserve normalization
+
   return vec3(x, y, z);
 }
 
@@ -154,7 +155,7 @@ getVertex(uint index)
 BRDFSample
 LambertBRDF(vec3 normal, inout uint randState)
 {
-  vec3 tangent = cross(normal, VEC3_UP);
+  vec3 tangent = normalize(cross(VEC3_UP, normal));
   vec3 bitangent = cross(normal, tangent);
   vec3 localDir = randomCosineWeightedVector(randState);
 
@@ -336,13 +337,7 @@ sceneHit(Ray ray, inout Intersection intersection)
 
 void main()
 {
-  uint randState = (
-    uint(gl_FragCoord.x) * uint(1973)
-    + uint(gl_FragCoord.y) * uint(9277)
-    + uint(Uniforms.iFrame) * uint(26699)
-  ) | uint(1);
-
-  randState += 2478;
+  uint randState = uint(uint(gl_FragCoord.x) * uint(1973) + uint(gl_FragCoord.y) * uint(9277) + uint(1.0) * uint(26699)) | uint(1);
 
   Ray ray = generateRay();
   ray.origin.z = 10.0;
@@ -390,8 +385,6 @@ void main()
       // Diffuse bounce.
       ray.origin += t * ray.dir + EPSILON * normal;
       ray.dir = brdf.dir;
-      radiance.rgb = brdf.dir;
-      break;
     }
   }
 
