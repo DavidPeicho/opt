@@ -337,7 +337,7 @@ sceneHit(Ray ray, inout Intersection intersection)
 
 void main()
 {
-  uint randState = uint(uint(gl_FragCoord.x) * uint(1973) + uint(gl_FragCoord.y) * uint(9277) + uint(1.0) * uint(26699)) | uint(1);
+  uint randState = uint(uint(gl_FragCoord.x) * uint(1973) + uint(gl_FragCoord.y) * uint(9277) + uint(Uniforms.iFrame) * uint(26699)) | uint(1);
 
   Ray ray = generateRay();
   ray.origin.z = 10.0;
@@ -345,47 +345,45 @@ void main()
   vec3 throughput = vec3(1.0);
   radiance = vec4(vec3(0.0), 1.0);
 
-  uint maxBounces = 2;
-
   Intersection intersection;
-  for (uint bounces = 0; bounces < maxBounces; ++bounces)
+  for (uint bounces = 0; bounces < 4; ++bounces)
   {
     intersection.emissive = vec3(0.0);
     intersection.emitter = false;
 
     float t = sceneHit(ray, intersection);
-    if (t != MAX_FLOAT)
+
+    radiance.rgb += throughput * intersection.emissive;
+
+    if (t >= MAX_FLOAT) { break; }
+
+    if (intersection.emitter)
     {
-      radiance.rgb += throughput * intersection.emissive;
-
-      if (intersection.emitter)
-      {
-        // Sample emitter here.
-        continue;
-      }
-
-      vec2 uv = intersection.uv;
-      float barycentricW = 1.0 - uv.x - uv.y;
-      vec3 n0 = getVertex(intersection.index).normal;
-      vec3 n1 = getVertex(intersection.index + 1).normal;
-      vec3 n2 = getVertex(intersection.index + 2).normal;
-      vec3 normal = barycentricW * n0 + uv.x * n1 + uv.y * n2;
-
-      // 𝐿𝑟 𝛚𝑟 ≈ 𝑁 𝑓𝑟 𝛚𝑖,𝛚𝑟 𝐿𝑖 𝛚𝑖 cos𝜃𝑖⁡
-
-      // We sample in a cosine weighted hemisphere, so basially we remove
-      // the 2PI term and the multiplication by cos(𝜃) as the samples are already
-      // sampled in a cosine hemisphere.
-      BRDFSample brdf = LambertBRDF(normal, randState);
-
-      Material mat = materials[intersection.materialIndex];
-      vec3 directRadiance = mat.albedo.rgb * brdf.pdf;
-      throughput *= directRadiance;
-
-      // Diffuse bounce.
-      ray.origin += t * ray.dir + EPSILON * normal;
-      ray.dir = brdf.dir;
+      // Sample emitter here.
+      break;
     }
+
+    vec2 uv = intersection.uv;
+    float barycentricW = 1.0 - uv.x - uv.y;
+    vec3 n0 = getVertex(intersection.index).normal;
+    vec3 n1 = getVertex(intersection.index + 1).normal;
+    vec3 n2 = getVertex(intersection.index + 2).normal;
+    vec3 normal = barycentricW * n0 + uv.x * n1 + uv.y * n2;
+
+    // 𝐿𝑟 𝛚𝑟 ≈ 𝑁 𝑓𝑟 𝛚𝑖,𝛚𝑟 𝐿𝑖 𝛚𝑖 cos𝜃𝑖⁡
+
+    // We sample in a cosine weighted hemisphere, so basially we remove
+    // the 2PI term and the multiplication by cos(𝜃) as the samples are already
+    // sampled in a cosine hemisphere.
+    BRDFSample brdf = LambertBRDF(normal, randState);
+
+    Material mat = materials[intersection.materialIndex];
+    vec3 directRadiance = mat.albedo.rgb * brdf.pdf;
+    throughput *= directRadiance;
+
+    // Diffuse bounce.
+    ray.origin += t * ray.dir + EPSILON * normal;
+    ray.dir = brdf.dir;
   }
 
 }
