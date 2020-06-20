@@ -7,6 +7,7 @@
 #include <albedo/backend/buffer.h>
 #include <albedo/backend/bind-group.h>
 #include <albedo/backend/render-pipeline.h>
+#include <albedo/backend/texture.h>
 #include <albedo/scene.h>
 
 namespace albedo
@@ -82,6 +83,8 @@ class Renderer
 
     backend::RenderPipeline m_renderPipeline;
     backend::BindGroup<7> m_bindGroup;
+    backend::Texture m_renderTarget;
+
     WGPUCommandEncoderId m_commandEncoder; // TODO: refactor out?
 
     backend::Buffer<RenderInfo> m_renderInfoBuffer;

@@ -112,6 +112,23 @@ Buffer<T>::write(const T* const data, size_t start, size_t count)
   return m_writePromise.get_future();
 }
 
+template <typename T>
+void
+Buffer<T>::flush(WGPUQueueId queueId, const T* const data, size_t count)
+{
+  flush(queueId, data, 0, count);
+}
+
+template <typename T>
+void
+Buffer<T>::flush(WGPUQueueId queueId, const T* const data, size_t start, size_t count)
+{
+  const auto* datau8 = reinterpret_cast<const uint8_t*>(data);
+  const size_t nbBytes = sizeof (T) * count;
+  const auto startByte = sizeof (T) * start;
+  wgpu_queue_write_buffer(queueId, datau8, nbBytes, m_id, startByte);
+}
+
 } // namespace backend
 
 } // namespace albedo

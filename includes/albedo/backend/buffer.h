@@ -61,6 +61,12 @@ class Buffer
     std::future<WGPUBufferMapAsyncStatus>
     write(const T* const data, size_t start, size_t count);
 
+    void
+    flush(WGPUQueueId queueId, const T* const data, size_t count);
+
+    void
+    flush(WGPUQueueId queueId, const T* const data, size_t start, size_t count);
+
     inline WGPUBindGroupId
     id() const { return m_id; }
 
