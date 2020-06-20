@@ -3,12 +3,38 @@
 #include <array>
 
 #include <albedo/wgpu.h>
+#include <albedo/backend/object.h>
 
 namespace albedo
 {
 
 namespace backend
 {
+
+template <uint8_t EntriesCount>
+class BindGroupLayout: public WGPUObject<WGPUBindGroupId>
+{
+
+  public:
+
+    BindGroupLayout() noexcept;
+
+    ~BindGroupLayout() noexcept;
+
+  public:
+
+    void
+    create(WGPUDeviceId deviceId);
+
+    void
+    setEntry(uint8_t at, WGPUShaderStage visiblity, WGPUBindingType type);
+
+  private:
+
+    std::array<WGPUBindGroupLayoutEntry, EntriesCount> m_entries;
+    WGPUBindGroupLayoutDescriptor m_descriptor;
+
+};
 
 // TODO: move to sources and use PIMPL.
 
