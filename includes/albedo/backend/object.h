@@ -10,27 +10,32 @@ namespace backend
 
 // TODO: move to sources and use PIMPL.
 
-template <typename Id>
+template <typename Descriptor>
 class WGPUObject
 {
   public:
 
-    WGPUObject() noexcept;
+    WGPUObject() noexcept = default;
 
     virtual ~WGPUObject() noexcept = 0;
 
   public:
 
-    void create(WGPUDeviceId deviceId) = 0;
+    virtual bool
+    operator==(const WGPUObject& other) const { return other.m_id == m_id; }
+
+    virtual bool
+    operator!=(const WGPUObject& other) const { return other.m_id != m_id; }
 
   public:
 
-    inline Id
+    inline WGPUNonZeroU64
     id() const { return m_id; }
 
-  private:
+  protected:
 
-    Id m_id;
+    WGPUNonZeroU64 m_id;
+    Descriptor m_descriptor;
 };
 
 } // namespace backend

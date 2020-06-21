@@ -15,6 +15,12 @@ BindGroupLayout<EntriesCount>::BindGroupLayout() noexcept
 }
 
 template <uint8_t EntriesCount>
+BindGroupLayout<EntriesCount>::~BindGroupLayout() noexcept
+{
+  // TODO: destroy the object.
+}
+
+template <uint8_t EntriesCount>
 void
 BindGroupLayout<EntriesCount>::create(WGPUDeviceId deviceId)
 {
@@ -24,14 +30,14 @@ BindGroupLayout<EntriesCount>::create(WGPUDeviceId deviceId)
     m_descriptor.entries = &m_entries[0];
   }
   // TODO: add check for success.
-  m_id = wgpu_device_create_bind_group(deviceId, &m_descriptor);
+  m_id = wgpu_device_create_bind_group_layout(deviceId, &m_descriptor);
 }
 
 template <uint8_t EntriesCount>
 void
 BindGroupLayout<EntriesCount>::setEntry(
   uint8_t at,
-  WGPUShaderStage visiblity,
+  WGPUShaderStage visibility,
   WGPUBindingType type
 )
 {
@@ -42,14 +48,22 @@ BindGroupLayout<EntriesCount>::setEntry(
   };
 }
 
-template <uint8_t NbEntries>
-BindGroup<NbEntries>::BindGroup() noexcept
-  : m_entries{}
+template <uint8_t EntriesCount>
+void
+BindGroupLayout<EntriesCount>::setEntries(
+  const std::initializer_list<WGPUBindGroupLayoutEntry>& entries
+)
 {
-  m_bindGroupDescriptor.label = "bind group";
-  m_bindGroupDescriptor.layout = 0;
-  m_bindGroupDescriptor.entries = nullptr;
-  m_bindGroupDescriptor.entries_length = 0;
+  for (const auto& entry: entries) { m_entries[entry.binding] = entry; }
+}
+
+template <uint8_t EntriesCount>
+BindGroup<EntriesCount>::BindGroup() noexcept
+{
+  m_descriptor.label = "bind group";
+  m_descriptor.layout = 0;
+  m_descriptor.entries = nullptr;
+  m_descriptor.entries_length = 0;
 }
 
 template <uint8_t NbEntries>
@@ -59,27 +73,35 @@ BindGroup<NbEntries>::~BindGroup() noexcept
   // Needs fix from wgpu-native.
 }
 
-template <uint8_t NbEntries>
+template <uint8_t EntriesCount>
 void
-BindGroup<NbEntries>::create(WGPUDeviceId deviceId, WGPUBindGroupLayoutId bindGroupLayoutId)
+BindGroup<EntriesCount>::create(WGPUDeviceId deviceId, WGPUBindGroupLayoutId layoutId)
 {
-  m_bindGroupDescriptor.entries_length = m_entries.size();
-  if (m_bindGroupDescriptor.entries_length > 0)
+  m_descriptor.entries_length = m_entries.size();
+  if (m_descriptor.entries_length > 0)
   {
-    m_bindGroupDescriptor.entries = &m_entries[0];
+    m_descriptor.entries = &m_entries[0];
   }
-  m_bindGroupDescriptor.layout = bindGroupLayoutId;
+  m_descriptor.layout = layoutId;
 
   // TODO: add check for success.
-  m_id = wgpu_device_create_bind_group(deviceId, &m_bindGroupDescriptor);
+  m_id = wgpu_device_create_bind_group(deviceId, &m_descriptor);
 }
 
-template <uint8_t NbEntries>
-template <typename T>
+template <uint8_t EntriesCount>
 void
-BindGroup<NbEntries>::setEntry(T&& entry, uint8_t at)
+BindGroup<EntriesCount>::setEntry(uint8_t at, WGPUBindingResource resource)
 {
-  m_entries[at] = std::forward<T>(entry);
+  m_entries[at] = WGPUBindGroupEntry { .binding = at, .resource = resource };
+}
+
+template <uint8_t EntriesCount>
+void
+BindGroup<EntriesCount>::setEntries(
+  const std::initializer_list<WGPUBindGroupEntry>& entries
+)
+{
+  for (const auto& entry: entries) { m_entries[entry.binding] = entry; }
 }
 
 } // namespace backend

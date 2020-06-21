@@ -6,9 +6,8 @@ namespace albedo
 namespace backend
 {
 
-TextureView::TextureView(WGPUTextureId textureId)
+TextureView::TextureView(WGPUTextureId textureId) noexcept
   : m_textureId{textureId}
-  , m_id{0}
 {
   m_descriptor.format = WGPUTextureFormat_Rgba8UnormSrgb;
   m_descriptor.dimension = WGPUTextureViewDimension_D2;
@@ -19,7 +18,7 @@ TextureView::TextureView(WGPUTextureId textureId)
   m_descriptor.array_layer_count = 0;
 }
 
-TextureView::~TextureView()
+TextureView::~TextureView() noexcept
 {
   // TODO: destroy view.
 }
@@ -47,7 +46,7 @@ Texture::Texture() noexcept
   m_descriptor.usage = WGPUTextureUsage_SAMPLED;
 }
 
-Texture::~Texture()
+Texture::~Texture() noexcept
 {
   // TODO: destroys all views.
   // TODO: destroy the object.

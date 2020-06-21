@@ -1,5 +1,7 @@
-#include <albedo/wgpu.h>
 #include <vector>
+
+#include <albedo/wgpu.h>
+#include <albedo/backend/object.h>
 
 namespace albedo
 {
@@ -9,7 +11,7 @@ namespace backend
 
 // Add basic inheritance just for `id`.
 // TODO: move to sources and use PIMPL.
-class TextureView
+class TextureView: public WGPUObject<WGPUTextureViewDescriptor>
 {
   public:
 
@@ -59,9 +61,6 @@ class TextureView
   private:
 
     WGPUTextureId m_textureId;
-    WGPURenderPipelineId m_id;
-
-    WGPUTextureViewDescriptor m_descriptor;
 
 };
 

@@ -129,6 +129,21 @@ Buffer<T>::flush(WGPUQueueId queueId, const T* const data, size_t start, size_t 
   wgpu_queue_write_buffer(queueId, datau8, nbBytes, m_id, startByte);
 }
 
+template <typename T>
+WGPUBindingResource
+Buffer<T>::getBindingResource(size_t offset) const
+{
+  WGPUBufferBinding buffer;
+  buffer.buffer = m_id;
+  buffer.size = getByteSize();
+  buffer.offset = offset;
+
+  WGPUBindingResource r;
+  r.tag = WGPUBindingResource_Buffer;
+  r.buffer = WGPUBindingResource_WGPUBuffer_Body { ._0 = buffer };
+  return r;
+}
+
 } // namespace backend
 
 } // namespace albedo

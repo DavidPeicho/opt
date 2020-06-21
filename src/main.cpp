@@ -95,7 +95,7 @@ int main() {
       (void*)&adapterId
   );
 
-  WGPUDeviceDescriptor deviceDescriptor{
+  WGPUDeviceDescriptor deviceDescriptor {
     .extensions = { .anisotropic_filtering = false },
     .limits = { .max_bind_groups = 2 }
   };

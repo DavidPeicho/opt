@@ -1,3 +1,5 @@
+#pragma once
+
 #include <albedo/wgpu.h>
 #include <future>
 
@@ -44,10 +46,10 @@ class Buffer
     }
 
     inline size_t
-    getByteSize() { return m_descriptor.size; }
+    getByteSize() const { return m_descriptor.size; }
 
     inline size_t
-    getElementCount() { return m_descriptor.size / sizeof (T); }
+    getElementCount() const { return m_descriptor.size / sizeof (T); }
 
     std::future<WGPUBufferMapAsyncStatus>
     read(T* const dest, size_t count);
@@ -66,6 +68,9 @@ class Buffer
 
     void
     flush(WGPUQueueId queueId, const T* const data, size_t start, size_t count);
+
+    WGPUBindingResource
+    getBindingResource(size_t offset = 0) const;
 
     inline WGPUBindGroupId
     id() const { return m_id; }

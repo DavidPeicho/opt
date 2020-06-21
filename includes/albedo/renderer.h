@@ -83,6 +83,7 @@ class Renderer
 
     backend::RenderPipeline m_renderPipeline;
     backend::BindGroup<7> m_bindGroup;
+    backend::BindGroupLayout<7> m_bindGroupLayout;
     backend::Texture m_renderTarget;
 
     WGPUCommandEncoderId m_commandEncoder; // TODO: refactor out?

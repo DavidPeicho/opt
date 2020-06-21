@@ -62,7 +62,7 @@ Renderer::init(const Scene& scene)
   WGPUShaderModuleId vertexShader = wgpu_device_create_shader_module(m_deviceId, &vertexModuleDescriptor);
   WGPUShaderModuleId fragmentShader = wgpu_device_create_shader_module(m_deviceId, &fragmentModuleDescriptor);
 
-  const WGPUBindGroupLayoutEntry layoutEntries[7] = {
+  m_bindGroupLayout.setEntries({
     {
         .binding = 0,
         .visibility = WGPUShaderStage_FRAGMENT,
@@ -98,17 +98,10 @@ Renderer::init(const Scene& scene)
         .visibility = WGPUShaderStage_FRAGMENT,
         .ty = WGPUBindingType_UniformBuffer
     }
-  };
+  });
+  m_bindGroupLayout.create(m_deviceId);
 
-  WGPUBindGroupLayoutDescriptor bindLayoutGroupDesriptor {
-      .label = "bind group layout",
-      .entries = layoutEntries,
-      .entries_length = 7,
-  };
-
-  WGPUBindGroupLayoutId bindLayoutGroupId = wgpu_device_create_bind_group_layout(m_deviceId, &bindLayoutGroupDesriptor);
-
-  WGPUBindGroupLayoutId bind_group_layouts[1] = { bindLayoutGroupId };
+  WGPUBindGroupLayoutId bind_group_layouts[1] = { m_bindGroupLayout.id() };
 
   WGPUPipelineLayoutDescriptor pipelineLayoutDesc{
     .bind_group_layouts = bind_group_layouts,
@@ -137,71 +130,6 @@ Renderer::init(const Scene& scene)
   m_uniformsBuffer.setSize(1);
   m_uniformsBuffer.create(m_deviceId);
 
-  // TODO: create a method to generate binding resource from a buffer.
-
-  WGPUBindingResource renderUniformResource = {
-    .tag = WGPUBindingResource_Buffer,
-      .buffer = (WGPUBufferBinding) {
-          .buffer = m_renderInfoBuffer.id(),
-          .size = m_renderInfoBuffer.getByteSize(),
-          .offset = 0
-      }
-  };
-
-  WGPUBindingResource instanceResource = {
-    .tag = WGPUBindingResource_Buffer,
-      .buffer = (WGPUBufferBinding) {
-          .buffer = m_instanceBuffer.id(),
-          .size = m_instanceBuffer.getByteSize(),
-          .offset = 0
-      }
-  };
-
-  WGPUBindingResource vertexResource = {
-    .tag = WGPUBindingResource_Buffer,
-      .buffer = (WGPUBufferBinding) {
-          .buffer = m_vertexBuffer.id(),
-          .size = m_vertexBuffer.getByteSize(),
-          .offset = 0
-      }
-  };
-
-  WGPUBindingResource indexResource = {
-    .tag = WGPUBindingResource_Buffer,
-      .buffer = (WGPUBufferBinding) {
-          .buffer = m_indicesBuffer.id(),
-          .size = m_indicesBuffer.getByteSize(),
-          .offset = 0
-      }
-  };
-
-  WGPUBindingResource bvhResource = {
-    .tag = WGPUBindingResource_Buffer,
-      .buffer = (WGPUBufferBinding) {
-          .buffer = m_nodesBuffer.id(),
-          .size = m_nodesBuffer.getByteSize(),
-          .offset = 0
-      }
-  };
-
-  WGPUBindingResource materialResource = {
-    .tag = WGPUBindingResource_Buffer,
-      .buffer = (WGPUBufferBinding) {
-          .buffer = m_materialBuffer.id(),
-          .size = m_materialBuffer.getByteSize(),
-          .offset = 0
-      }
-  };
-
-  WGPUBindingResource uniformResource = {
-    .tag = WGPUBindingResource_Buffer,
-      .buffer = (WGPUBufferBinding) {
-          .buffer = m_uniformsBuffer.id(),
-          .size = m_uniformsBuffer.getByteSize(),
-          .offset = 0
-      }
-  };
-
   m_renderTarget.setDescriptor(WGPUTextureDescriptor {
     .label = "render targert",
     .size = WGPUExtent3d { .width = 640, .height = 480, .depth = 1 },
@@ -213,38 +141,17 @@ Renderer::init(const Scene& scene)
   });
   m_renderTarget.create(m_deviceId);
 
-  
+  m_bindGroup.setEntries({
+    { .binding = 0, .resource = m_renderInfoBuffer.getBindingResource() },
+    { .binding = 1, .resource = m_instanceBuffer.getBindingResource() },
+    { .binding = 2, .resource = m_nodesBuffer.getBindingResource() },
+    { .binding = 3, .resource = m_indicesBuffer.getBindingResource() },
+    { .binding = 4, .resource = m_vertexBuffer.getBindingResource() },
+    { .binding = 5, .resource = m_materialBuffer.getBindingResource() },
+    { .binding = 6, .resource = m_uniformsBuffer.getBindingResource() }
+  });
 
-  m_bindGroup.setEntry(WGPUBindGroupEntry {
-      .binding = 0,
-			.resource = renderUniformResource
-  }, 0);
-  m_bindGroup.setEntry(WGPUBindGroupEntry {
-      .binding = 1,
-			.resource = instanceResource
-  }, 1);
-  m_bindGroup.setEntry(WGPUBindGroupEntry {
-      .binding = 2,
-			.resource = bvhResource
-  }, 2);
-  m_bindGroup.setEntry(WGPUBindGroupEntry {
-      .binding = 3,
-			.resource = indexResource
-  }, 3);
-  m_bindGroup.setEntry(WGPUBindGroupEntry {
-      .binding = 4,
-			.resource = vertexResource
-  }, 4);
-  m_bindGroup.setEntry(WGPUBindGroupEntry {
-      .binding = 5,
-			.resource = materialResource
-  }, 5);
-  m_bindGroup.setEntry(WGPUBindGroupEntry {
-      .binding = 6,
-			.resource = uniformResource
-  }, 6);
-
-  m_bindGroup.create(m_deviceId, bindLayoutGroupId);
+  m_bindGroup.create(m_deviceId, m_bindGroupLayout.id());
 
   // TODO: check for errors?
   m_swapChainId = wgpu_device_create_swap_chain(
