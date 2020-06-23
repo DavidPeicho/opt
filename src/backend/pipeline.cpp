@@ -1,10 +1,29 @@
-#include <albedo/backend/render-pipeline.h>
+#include <albedo/backend/pipeline.h>
 
 namespace albedo
 {
 
 namespace backend
 {
+
+PipelineLayout::~PipelineLayout() noexcept
+{
+// TODO
+}
+
+void
+PipelineLayout::create(
+  WGPUDeviceId deviceId,
+  const std::initializer_list<WGPUBindGroupLayoutId>& layouts
+)
+{
+  auto descriptor = WGPUPipelineLayoutDescriptor {
+    .bind_group_layouts = nullptr,
+    .bind_group_layouts_length = layouts.size()
+  };
+  descriptor.bind_group_layouts = layouts.size() > 0 ? layouts.begin() : nullptr;
+  m_id = wgpu_device_create_pipeline_layout(deviceId, &descriptor);
+}
 
 RenderPipeline::RenderPipeline() noexcept
 {
@@ -48,16 +67,16 @@ RenderPipeline::RenderPipeline() noexcept
   m_descriptor.sample_count = 1;
 }
 
-RenderPipeline::~RenderPipeline()
+RenderPipeline::~RenderPipeline() noexcept
 {
   // TODO: destroy the object.
   // Needs fix from wgpu-native.
 }
 
 void
-RenderPipeline::create(WGPUDeviceId deviceId, WGPUPipelineLayoutId pipelineLayoutId)
+RenderPipeline::create(WGPUDeviceId deviceId)
 {
-  m_descriptor.layout = pipelineLayoutId;
+  m_descriptor.layout = m_layout != nullptr ? m_layout->id() : 0;
   // TODO: add check for success.
   m_id = wgpu_device_create_render_pipeline(deviceId, &m_descriptor);
 }
@@ -80,6 +99,26 @@ RenderPipeline::bindFragmentShader(
 {
   m_fragmentStageDescriptor.module = module;
   m_fragmentStageDescriptor.entry_point = entry;
+}
+
+ComputePipeline::~ComputePipeline() noexcept
+{
+  // TODO: destroy the object.
+}
+
+void
+ComputePipeline::create(WGPUDeviceId deviceId)
+{
+  m_descriptor.layout = m_layout != nullptr ? m_layout->id() : 0;
+  // TODO: add check for success.
+  m_id = wgpu_device_create_compute_pipeline(deviceId, &m_descriptor);
+}
+
+void
+ComputePipeline::bindShader(WGPUShaderModuleId module, const char* entry)
+{
+  m_descriptor.compute_stage.module = module;
+  m_descriptor.compute_stage.entry_point = entry;
 }
 
 } // namespace backend

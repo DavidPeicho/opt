@@ -17,17 +17,21 @@ class WGPUObject
 
     WGPUObject() noexcept = default;
 
-    virtual ~WGPUObject() noexcept = 0;
+    virtual ~WGPUObject() noexcept
+    { }
 
   public:
 
-    virtual bool
+    bool
     operator==(const WGPUObject& other) const { return other.m_id == m_id; }
 
-    virtual bool
+    bool
     operator!=(const WGPUObject& other) const { return other.m_id != m_id; }
 
   public:
+
+    inline void
+    setDescriptor(const Descriptor& descriptor) { m_descriptor = descriptor; }
 
     inline WGPUNonZeroU64
     id() const { return m_id; }

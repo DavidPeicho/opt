@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vector>
 
 #include <albedo/wgpu.h>
@@ -8,6 +10,25 @@ namespace albedo
 
 namespace backend
 {
+
+class TextureSampler: public WGPUObject<WGPUSamplerDescriptor>
+{
+  public:
+
+    TextureSampler() noexcept;
+    ~TextureSampler() noexcept;
+
+  public:
+
+    void
+    create(WGPUDeviceId);
+
+  public:
+
+    WGPUBindingResource
+    getBindingResource() const;
+
+};
 
 // Add basic inheritance just for `id`.
 // TODO: move to sources and use PIMPL.
@@ -26,12 +47,8 @@ class TextureView: public WGPUObject<WGPUTextureViewDescriptor>
     void
     create();
 
-    inline TextureView&
-    setDescriptor(const WGPUTextureViewDescriptor& descriptor)
-    {
-      m_descriptor = descriptor;
-      return *this;
-    }
+    void
+    createAsDefault();
 
     inline TextureView&
     setFormat(WGPUTextureFormat format)
@@ -54,6 +71,9 @@ class TextureView: public WGPUObject<WGPUTextureViewDescriptor>
       return *this;
     }
 
+    WGPUBindingResource
+    getBindingResource() const;
+
   private:
 
     TextureView(WGPUTextureId textureId) noexcept;
@@ -65,7 +85,7 @@ class TextureView: public WGPUObject<WGPUTextureViewDescriptor>
 };
 
 // TODO: move to sources and use PIMPL.
-class Texture
+class Texture: public WGPUObject<WGPUTextureDescriptor>
 {
 
   public:
@@ -88,16 +108,23 @@ class Texture
     void
     destroyView(size_t);
 
-    inline WGPURenderPipelineId
-    id() const { return m_id; }
-
   public:
 
-    inline Texture&
-    setDescriptor(const WGPUTextureDescriptor& descriptor)
+    inline void
+    setWidth(uint32_t width) { m_descriptor.size.width = width; }
+
+    inline void
+    setHeight(uint32_t height) { m_descriptor.size.height = height; }
+
+    inline void
+    setDepth(uint32_t depth) { m_descriptor.size.height = depth; }
+
+    inline void
+    setDimensions(uint32_t width, uint32_t height, uint32_t depth)
     {
-      m_descriptor = descriptor;
-      return *this;
+      setWidth(width);
+      setHeight(height);
+      setDepth(depth);
     }
 
     inline TextureView&
@@ -105,10 +132,8 @@ class Texture
 
   private:
 
-    WGPURenderPipelineId m_id;
-    WGPUTextureDescriptor m_descriptor;
-
     std::vector<TextureView> m_views;
+
 };
 
 } // namespace backend

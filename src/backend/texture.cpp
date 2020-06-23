@@ -6,6 +6,30 @@ namespace albedo
 namespace backend
 {
 
+TextureSampler::TextureSampler() noexcept
+{
+}
+
+TextureSampler::~TextureSampler() noexcept
+{
+  // TODO
+}
+
+void
+TextureSampler::create(WGPUDeviceId deviceId)
+{
+  m_id = wgpu_device_create_sampler(deviceId, &m_descriptor);
+}
+
+WGPUBindingResource
+TextureSampler::getBindingResource() const
+{
+  return WGPUBindingResource {
+    .tag = WGPUBindingResource_Sampler,
+    .sampler = m_id
+  };
+}
+
 TextureView::TextureView(WGPUTextureId textureId) noexcept
   : m_textureId{textureId}
 {
@@ -28,6 +52,23 @@ TextureView::create()
 {
   // TODO: destroy previous?
   m_id = wgpu_texture_create_view(m_textureId, &m_descriptor);
+}
+
+
+void
+TextureView::createAsDefault()
+{
+  // TODO: destroy previous?
+  m_id = wgpu_texture_create_view(m_textureId, nullptr);
+}
+
+WGPUBindingResource
+TextureView::getBindingResource() const
+{
+  return WGPUBindingResource {
+    .tag = WGPUBindingResource_TextureView,
+    .texture_view = m_id
+  };
 }
 
 Texture::Texture() noexcept

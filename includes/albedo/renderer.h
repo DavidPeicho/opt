@@ -6,7 +6,7 @@
 
 #include <albedo/backend/buffer.h>
 #include <albedo/backend/bind-group.h>
-#include <albedo/backend/render-pipeline.h>
+#include <albedo/backend/pipeline.h>
 #include <albedo/backend/texture.h>
 #include <albedo/scene.h>
 
@@ -19,7 +19,7 @@ struct RenderInfo {
   uint width;
   uint height;
   uint instanceCount;
-  uint pad_0;
+  uint frameCount;
 };
 
 struct Uniforms {
@@ -81,10 +81,14 @@ class Renderer
     WGPUSwapChainDescriptor m_swapChainDescriptor;
     WGPUSwapChainId m_swapChainId;
 
+    backend::ComputePipeline m_pathtracingPipeline;
+    backend::BindGroup m_pathtracingBindGroup;
+
     backend::RenderPipeline m_renderPipeline;
-    backend::BindGroup<7> m_bindGroup;
-    backend::BindGroupLayout<7> m_bindGroupLayout;
+    backend::BindGroup m_blittingBindGroup;
+
     backend::Texture m_renderTarget;
+    backend::TextureSampler m_rtSampler;
 
     WGPUCommandEncoderId m_commandEncoder; // TODO: refactor out?
 
