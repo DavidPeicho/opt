@@ -171,17 +171,28 @@ Scene::build()
 
   // TODO: move somewhere else. Shouldnt be created and destroyed.
 
+  #if 1
+  std::cout << "[ Scene Info ]" << std::endl;
+  #endif
+
   size_t totalNumberIndices = 0;
   size_t totalNumberVertices = 0;
   size_t totalNumberNodes = 0;
   for (auto& m: m_meshes)
   {
     // TODO: discard empty BVH.
-    SAHBuilder<2> builder(m->getBVH());
+    SAHBuilder builder(m->getBVH());
     builder.build(*m);
     totalNumberVertices += m->getVertexBuffer().size();
     totalNumberNodes += m->getBVH().nodes.size();
     totalNumberIndices += m->getIndices().size();
+
+    #if 1
+    const auto& bvh = m->getBVH();
+    std::cout << "  -> BVH" << std::endl;
+    std::cout << "     Nodes count = " << bvh.nodes.size() << std::endl;
+    std::cout << "     Depth = " << bvh.depth(bvh.rootIndex) << std::endl;
+    #endif
   }
 
   // TODO: clean all of that... it's a mess and not easy to understand.

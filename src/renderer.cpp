@@ -3,6 +3,8 @@
 
 #include <albedo/renderer.h>
 
+#define ACCUMULATE
+
 namespace albedo
 {
 
@@ -74,6 +76,11 @@ namespace
       {
         .binding = 7,
         .visibility = WGPUShaderStage_COMPUTE,
+        .ty = WGPUBindingType_ReadonlyStorageTexture
+      },
+      {
+        .binding = 8,
+        .visibility = WGPUShaderStage_COMPUTE,
         .ty = WGPUBindingType_WriteonlyStorageTexture
       }
     });
@@ -84,7 +91,7 @@ namespace
     pipelineLayout->create(deviceId, { bindGroupLayout->id() });
 
     WGPUShaderModuleDescriptor moduleDescriptor {
-      .code = readFile("../src/shaders/debug.comp.spv"),
+      .code = readFile("./src/shaders/debug.comp.spv"),
     };
     WGPUShaderModuleId module = wgpu_device_create_shader_module(
       deviceId, &moduleDescriptor
@@ -127,10 +134,10 @@ namespace
     pipelineLayout->create(deviceId, { bindGroupLayout->id() });
 
     WGPUShaderModuleDescriptor vertexModuleDescriptor{
-      .code = readFile("../src/shaders/blitting.vert.spv"),
+      .code = readFile("./src/shaders/blitting.vert.spv"),
     };
     WGPUShaderModuleDescriptor fragModuleDescriptor{
-      .code = readFile("../src/shaders/blitting.frag.spv"),
+      .code = readFile("./src/shaders/blitting.frag.spv"),
     };
     WGPUShaderModuleId vertexShader = wgpu_device_create_shader_module(deviceId, &vertexModuleDescriptor);
     WGPUShaderModuleId fragmentShader = wgpu_device_create_shader_module(deviceId, &fragModuleDescriptor);
@@ -174,6 +181,9 @@ Renderer::init(const Scene& scene)
   initBlittingPipeline(m_renderPipeline, m_blittingBindGroup, m_deviceId);
 
   m_info.instanceCount = scene.m_instances.size();
+
+  std::cout << "Instances Count = " << m_info.instanceCount << std::endl;
+
   m_renderInfoBuffer.setUsage(WGPUBufferUsage_COPY_DST | WGPUBufferUsage_UNIFORM);
   m_renderInfoBuffer.setSize(1);
   m_renderInfoBuffer.create(m_deviceId);
@@ -226,19 +236,26 @@ Renderer::resize(uint32_t width, uint32_t height)
 
     WGPUQueueId queue = wgpu_device_get_default_queue(m_deviceId);
 
-    m_renderTarget.setDescriptor(WGPUTextureDescriptor {
+    auto rtDescriptor = WGPUTextureDescriptor {
       .label = "render targert",
-      .size = WGPUExtent3d { .width = 640, .height = 480, .depth = 1 },
+      .size = WGPUExtent3d { .width = width, .height = height, .depth = 1 },
       .mip_level_count = 1,
       .sample_count = 1,
       .dimension = WGPUTextureDimension_D2,
-      .format = WGPUTextureFormat_Rgba16Float,
+      .format = WGPUTextureFormat_Rgba32Float,
       .usage = WGPUTextureUsage_SAMPLED | WGPUTextureUsage_STORAGE
-    });
+    };
+    m_renderTarget.setDescriptor(rtDescriptor);
     m_renderTarget.create(m_deviceId);
+    m_renderTarget2.setDescriptor(rtDescriptor);
+    m_renderTarget2.create(m_deviceId);
 
-    auto view = m_renderTarget.createView();
-    view.createAsDefault();
+    auto view = m_renderTarget.createDefaultView();
+    view.create();
+
+    // TODO: remove when light sampling is added to Ray Struct
+    auto view2 = m_renderTarget2.createDefaultView();
+    view2.create();
 
     // Needed because the texture changes.
     // TODO: create a separate bindgroup for the texture?
@@ -250,13 +267,30 @@ Renderer::resize(uint32_t width, uint32_t height)
       { .binding = 4, .resource = m_vertexBuffer.getBindingResource() },
       { .binding = 5, .resource = m_materialBuffer.getBindingResource() },
       { .binding = 6, .resource = m_uniformsBuffer.getBindingResource() },
-      { .binding = 7, .resource = view.getBindingResource() }
+      { .binding = 7, .resource = view.getBindingResource() },
+      { .binding = 8, .resource = view2.getBindingResource() }
     });
+
+    m_pathtracingBindGroup2.setLayout(m_pathtracingBindGroup.getLayout());
+    m_pathtracingBindGroup2.create(m_deviceId, {
+      { .binding = 0, .resource = m_renderInfoBuffer.getBindingResource() },
+      { .binding = 1, .resource = m_instanceBuffer.getBindingResource() },
+      { .binding = 2, .resource = m_nodesBuffer.getBindingResource() },
+      { .binding = 3, .resource = m_indicesBuffer.getBindingResource() },
+      { .binding = 4, .resource = m_vertexBuffer.getBindingResource() },
+      { .binding = 5, .resource = m_materialBuffer.getBindingResource() },
+      { .binding = 6, .resource = m_uniformsBuffer.getBindingResource() },
+      { .binding = 7, .resource = view2.getBindingResource() },
+      { .binding = 8, .resource = view.getBindingResource() }
+    });
+
     m_blittingBindGroup.create(m_deviceId, {
       { .binding = 0, .resource = m_renderInfoBuffer.getBindingResource() },
       { .binding = 1, .resource = m_rtSampler.getBindingResource() },
       { .binding = 2, .resource = view.getBindingResource() }
     });
+
+    m_info.frameCount = 1;
   }
   return *this;
 }
@@ -274,7 +308,9 @@ Renderer::startFrame(float deltaTime)
 
   WGPUQueueId queue = wgpu_device_get_default_queue(m_deviceId);
 
+  #ifdef ACCUMULATE
   m_uniforms.time += 1.0 + deltaTime;
+  #endif
   m_uniformsBuffer.flush(queue, &m_uniforms, 1);
 
   // TODO: separate Frame Count from dimensions, and only update the uniform
@@ -311,7 +347,18 @@ Renderer::startFrame(float deltaTime)
     m_commandEncoder, NULL
   );
   wgpu_compute_pass_set_pipeline(computePassId, m_pathtracingPipeline.id());
-  wgpu_compute_pass_set_bind_group(computePassId, 0, m_pathtracingBindGroup.id(), NULL, 0);
+  #ifdef ACCUMULATE
+  if (m_info.frameCount % 2 == 0)
+  {
+    wgpu_compute_pass_set_bind_group(computePassId, 0, m_pathtracingBindGroup.id(), NULL, 0);
+  }
+  else
+  {
+    wgpu_compute_pass_set_bind_group(computePassId, 0, m_pathtracingBindGroup2.id(), NULL, 0);
+  }
+  #else
+  wgpu_compute_pass_set_bind_group(computePassId, 0, m_pathtracingBindGroup2.id(), NULL, 0);
+  #endif
   wgpu_compute_pass_dispatch(computePassId, m_info.width, m_info.height, 1);
   wgpu_compute_pass_end_pass(computePassId);
 
@@ -334,7 +381,9 @@ Renderer::endFrame()
   wgpu_queue_submit(queue, const_cast<const WGPUCommandBufferId*>(&cmdBuffer), 1);
   wgpu_swap_chain_present(m_swapChainId);
 
+  #ifdef ACCUMULATE
   m_info.frameCount += 1;
+  #endif
 
   return *this;
 }

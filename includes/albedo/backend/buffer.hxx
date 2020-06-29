@@ -51,17 +51,18 @@ Buffer<T>::create(WGPUDeviceId deviceId, const T* const data, size_t count)
 {
   // TODO: destroy previous
   // TODO: add check for success.
-  m_descriptor.size = sizeof (T) * count;
+  auto size = sizeof (T) * count;
+  m_descriptor.size = size;
+  m_descriptor.mapped_at_creation = true;
 
   uint8_t* staging_memory = nullptr;
-  m_id = wgpu_device_create_buffer_mapped(
-    deviceId,
-    &m_descriptor,
-    &staging_memory
-  );
+  m_id = wgpu_device_create_buffer(deviceId, &m_descriptor);
 
+  // TODO: error checking.
+
+  uint8_t *stagingMemory = wgpu_buffer_get_mapped_range(m_id, 0, size);
   auto* ptr = reinterpret_cast<const T* const>(data);
-  std::memcpy(staging_memory, ptr, m_descriptor.size);
+  std::memcpy(stagingMemory, ptr, size);
 	wgpu_buffer_unmap(m_id);
 }
 
@@ -126,7 +127,7 @@ Buffer<T>::flush(WGPUQueueId queueId, const T* const data, size_t start, size_t 
   const auto* datau8 = reinterpret_cast<const uint8_t*>(data);
   const size_t nbBytes = sizeof (T) * count;
   const auto startByte = sizeof (T) * start;
-  wgpu_queue_write_buffer(queueId, datau8, nbBytes, m_id, startByte);
+  wgpu_queue_write_buffer(queueId, m_id, startByte, datau8, nbBytes);
 }
 
 template <typename T>

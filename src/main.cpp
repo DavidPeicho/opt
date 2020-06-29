@@ -84,28 +84,29 @@ int main() {
   [nsWindow.contentView setLayer : metalLayer] ;
   gSurfaceId = wgpu_create_surface_from_metal_layer(metalLayer);
 
-  WGPURequestAdapterOptions adapterOptions {
-    .power_preference = WGPUPowerPreference_LowPower,
+  WGPUAdapterId adapterId = { 0 };
+  auto adapterOptions = WGPURequestAdapterOptions {
+    .power_preference = WGPUPowerPreference_HighPerformance,
     .compatible_surface = gSurfaceId
   };
-
-  WGPUAdapterId adapterId = { 0 };
-  wgpu_request_adapter_async(&adapterOptions, 2 | 4 | 8,
-      request_adapter_callback,
-      (void*)&adapterId
+  wgpu_request_adapter_async(
+    &adapterOptions,
+    2 | 4 | 8,
+    false,
+    request_adapter_callback,
+    (void*)&adapterId
   );
 
-  WGPUDeviceDescriptor deviceDescriptor {
-    .extensions = { .anisotropic_filtering = false },
-    .limits = { .max_bind_groups = 2 }
+  WGPUCLimits limits {
+    .max_bind_groups = 2
   };
 
-  WGPUDeviceId deviceId = wgpu_adapter_request_device(adapterId, &deviceDescriptor, NULL);
+  WGPUDeviceId deviceId = wgpu_adapter_request_device(adapterId, 0, &limits, NULL);
 
   std::cout << "Loading scene..." << std::endl;
 
   albedo::loader::GLTFLoader loader;
-  auto sceneOptional = loader.load("../cornell-box.glb");
+  auto sceneOptional = loader.load("./cornell-box.glb");
   if (!sceneOptional)
   {
     std::cerr << "Failed to load scene" << std::endl;

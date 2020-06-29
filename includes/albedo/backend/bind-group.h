@@ -60,6 +60,7 @@ class BindGroup: public WGPUObject<WGPUBindGroupDescriptor>
   public:
 
     using Entries = std::initializer_list<WGPUBindGroupEntry>;
+    using BindGroupLayoutPtr = std::shared_ptr<BindGroupLayout>;
 
   public:
 
@@ -95,9 +96,12 @@ class BindGroup: public WGPUObject<WGPUBindGroupDescriptor>
       m_layout = layout;
     }
 
+    inline const std::shared_ptr<BindGroupLayout>&
+    getLayout() const { return m_layout; }
+
   private:
 
-    std::shared_ptr<BindGroupLayout> m_layout;
+    BindGroupLayoutPtr m_layout;
 
 };
 

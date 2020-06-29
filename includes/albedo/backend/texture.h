@@ -47,9 +47,6 @@ class TextureView: public WGPUObject<WGPUTextureViewDescriptor>
     void
     create();
 
-    void
-    createAsDefault();
-
     inline TextureView&
     setFormat(WGPUTextureFormat format)
     {
@@ -101,6 +98,9 @@ class Texture: public WGPUObject<WGPUTextureDescriptor>
 
     TextureView&
     createView() noexcept;
+
+    TextureView&
+    createDefaultView() noexcept;
 
     void
     destroyView(TextureView&) noexcept;

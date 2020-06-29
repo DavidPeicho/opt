@@ -54,14 +54,6 @@ TextureView::create()
   m_id = wgpu_texture_create_view(m_textureId, &m_descriptor);
 }
 
-
-void
-TextureView::createAsDefault()
-{
-  // TODO: destroy previous?
-  m_id = wgpu_texture_create_view(m_textureId, nullptr);
-}
-
 WGPUBindingResource
 TextureView::getBindingResource() const
 {
@@ -108,6 +100,15 @@ TextureView&
 Texture::createView() noexcept
 {
   m_views.emplace_back(TextureView{m_id});
+  return m_views.back();
+}
+
+TextureView&
+Texture::createDefaultView() noexcept
+{
+  TextureView view(m_id);
+  view.setFormat(m_descriptor.format);
+  m_views.emplace_back(std::move(view));
   return m_views.back();
 }
 

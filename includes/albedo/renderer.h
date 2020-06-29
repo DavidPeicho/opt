@@ -83,11 +83,17 @@ class Renderer
 
     backend::ComputePipeline m_pathtracingPipeline;
     backend::BindGroup m_pathtracingBindGroup;
+    // TODO: remove when migrating to a compute pass storing the result of
+    // the light sampling in the Ray structure.
+    backend::BindGroup m_pathtracingBindGroup2;
 
     backend::RenderPipeline m_renderPipeline;
     backend::BindGroup m_blittingBindGroup;
 
     backend::Texture m_renderTarget;
+    // TODO: remove when migrating to a compute pass storing the result of
+    // the light sampling in the Ray structure.
+    backend::Texture m_renderTarget2;
     backend::TextureSampler m_rtSampler;
 
     WGPUCommandEncoderId m_commandEncoder; // TODO: refactor out?
