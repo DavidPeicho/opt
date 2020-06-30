@@ -30,6 +30,7 @@
 #include <albedo/wgpu.h>
 
 #include <albedoloader/gltf-loader.h>
+#include <albedo/debug/scene-debugger.h>
 #include <albedo/scene.h>
 #include <albedo/renderer.h>
 
@@ -120,6 +121,9 @@ int main() {
   std::cout << "Building scene...." << std::endl;
   scene.build();
   std::cout << "Scene built!" << std::endl;
+
+  albedo::debug::SceneDebugger::writeGraphiz(scene, 0, "debug.dot");
+  return 0;
 
   std::cout << "Updating scene...." << std::endl;
   scene.update();

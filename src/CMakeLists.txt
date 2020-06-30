@@ -7,6 +7,7 @@ target_sources(webtracer PRIVATE
 )
 
 add_subdirectory(backend)
+add_subdirectory(debug)
 add_subdirectory(components)
 add_subdirectory(plugins)
 add_subdirectory(utils)

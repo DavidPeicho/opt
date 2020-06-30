@@ -237,36 +237,6 @@ Scene::build()
 
     startIndex += mesh.getVertexBuffer().size();
   }
-
-  #if 0
-  for (size_t i = 0; i < m_indices.size(); i += 3)
-  {
-    const auto& v0 = m_vertices[m_indices[i]].position;
-    const auto& v1 = m_vertices[m_indices[i + 1]].position;
-    const auto& v2 = m_vertices[m_indices[i + 2]].position;
-    std::cout << glm::to_string(v0) << glm::to_string(v1) << glm::to_string(v2) << std::endl;
-  }
-  #endif
-
-  #if 0
-  for (const auto& node: m_nodes) {
-    if (node.primitiveStartIndex != 0xFFFFFFFF) {
-      std::cout << node.primitiveStartIndex << std::endl;
-    }
-  }
-  #endif
-
-  #if 0
-  for (size_t i = 0; i < m_nodes.size(); ++i)
-  {
-    const auto& node = m_nodes[i];
-    // std::cout << "Node - Old Index " << node.oldIndex << " - New Index " << i << std::endl;
-    std::cout << " Primitive Index = " << node.primitiveStartIndex << std::endl;
-    std::cout << " Min(" << glm::to_string(node.min) << ")" << std::endl;
-    std::cout << " Max(" << glm::to_string(node.max) << ")" << std::endl;
-    std::cout << " Next -> " << node.nextNodeIndex << std::endl;
-  }
-  #endif
 }
 
 Scene&

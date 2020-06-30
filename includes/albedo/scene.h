@@ -21,6 +21,11 @@
 namespace albedo
 {
 
+namespace debug
+{
+  class SceneDebugger;
+}
+
 using TransformManager = components::TransformManager;
 
 namespace
@@ -38,46 +43,6 @@ struct Renderable: public Component<Renderable>
 {
   Mesh::IndexType meshIndex;
   Mesh::IndexType materialIndex;
-};
-
-// TODO: move out of Scene.
-// TODO: improve this class API. Right now it wraps stuff without much reasons,
-// even though it does memoization of start indices.
-template <class T>
-struct EntryOffsetTable
-{
-  inline void
-  push(const std::vector<T>& entry)
-  {
-    auto start = data.size();
-    data.insert(data.end(), entry.begin(), entry.end());
-    entries.push_back(start);
-  }
-
-  inline void
-  clear()
-  {
-    data.clear();
-    entries.clear();
-  }
-
-  inline typename std::vector<T>::iterator
-  beginEntry(size_t i)
-  {
-    if (i >= entries.size()) { return data.end(); }
-    return data.begin() + entries[i];
-  }
-
-  inline typename std::vector<T>::iterator
-  endEntry(size_t i)
-  {
-    if (i + 1 >= entries.size()) { return data.end(); }
-    return data.begin() + entries[i + 1];
-  }
-
-  std::vector<T> data;
-  std::vector<uint32_t> entries;
-
 };
 
 // TODO: Separate leaf from internal nodes.
@@ -107,6 +72,7 @@ struct InstanceGPU
 class Scene
 {
   friend class Renderer;
+  friend class debug::SceneDebugger;
 
   public:
     Scene() noexcept = default;
