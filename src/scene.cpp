@@ -245,6 +245,45 @@ Scene::update()
   // TODO: update only when dirty.
   m_transforms.computeWorldTransforms();
 
+  // Update lights.
+  const auto& lightComponents = m_lightsManager.m_components.components();
+  const auto& lightEntities = m_lightsManager.m_components.entities();
+  m_lights.resize(lightEntities.size());
+  std::cout << "SENDING LIGHT" << std::endl;
+  for (size_t i = 0; i < lightEntities.size(); ++i)
+  {
+    auto entity = lightEntities[i];
+    const auto& data = lightComponents[i];
+    auto& instance = m_lights[i];
+
+    instance.intensity = data.intensity;
+    instance.normal = glm::vec4(0.0, 0.0, 1.0, 0.0);
+    instance.tangent = glm::vec4(1.0, 0.0, 0.0, 0.0);
+    instance.bitangent = glm::vec4(0.0, - 1.0, 0.0, 0.0);
+
+    auto transformData = m_transforms.getComponent(entity);
+    if (transformData)
+    {
+      auto matrix = transformData->localToWorld;
+      glm::vec4 origin = glm::vec4(transformData->getWorldPosition(), 1.0);
+      instance.normal = matrix * glm::vec4(0.0, 0.0, 1.0, 0.0);
+      instance.tangent = matrix * glm::vec4(data.width, 0.0, 0.0, 0.0);
+      instance.bitangent = matrix * glm::vec4(0.0, - data.height, 0.0, 0.0);
+
+      origin = origin - 0.5f * instance.tangent - 0.5f * instance.bitangent;
+
+      // Pack origin into the normal, tangent, and bitangent vectors.
+      instance.normal.w = origin.x;
+      instance.tangent.w = origin.y;
+      instance.bitangent.w = origin.z;
+
+      // std::cout << glm::to_string(origin) << std::endl;
+      // std::cout << glm::to_string(instance.normal) << std::endl;
+      // std::cout << glm::to_string(instance.tangent) << std::endl;
+      // std::cout << glm::to_string(instance.bitangent) << std::endl;
+    }
+  }
+
   const auto& renderableComponents = m_renderables.components();
   const auto& renderableEntities = m_renderables.entities();
   m_instances.resize(renderableEntities.size());

@@ -5,7 +5,8 @@ layout( location = 0 ) in vec2 vUv;
 layout ( binding = 0 ) uniform RenderSettingsBuffer {
   uint width;
   uint height;
-  uint instanceCount;
+  uint instanceCount; // TODO: move to a unique scene uniform
+  uint lightCount; // TODO: move to a unique scene uniform
   uint frameCount;
 } RenderSettings;
 
@@ -17,5 +18,4 @@ layout(location = 0) out vec4 outColor;
 void main() {
   vec4 color = texture(sampler2D(uTexture, uTextureSampler), vUv).rgba;
   outColor = color.rgba / float(RenderSettings.frameCount);
-  // outColor = color;
 }

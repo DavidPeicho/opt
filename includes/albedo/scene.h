@@ -11,6 +11,7 @@
 #include <albedo/components/component.h>
 #include <albedo/components/component-structure.h>
 #include <albedo/components/material.h>
+#include <albedo/components/light.h>
 #include <albedo/components/transform.h>
 #include <albedo/entity.h>
 #include <albedo/material.h>
@@ -65,6 +66,18 @@ struct InstanceGPU
   uint32_t materialIndex;
   uint32_t padding_0;
   uint32_t padding_1;
+};
+
+// Origin saved in normal.z, tangent.z, bitangent.z
+struct LightGPU
+{
+  glm::vec4 normal;
+  glm::vec4 tangent;
+  glm::vec4 bitangent;
+  float intensity;
+  float padding_0;
+  float padding_1;
+  float padding_2;
 };
 
 // TODO: add method to synchronize resources. What happens if the layout
@@ -136,6 +149,9 @@ class Scene
     OptionalRef<T>
     data(const Entity&);
 
+    inline components::LightManager&
+    lights() { return m_lightsManager; }
+
     inline TransformManager&
     transforms() { return m_transforms; }
 
@@ -143,12 +159,14 @@ class Scene
     ComponentArray<InstanceData> m_data;
     ComponentArray<Renderable> m_renderables;
 
+    components::LightManager m_lightsManager;
     TransformManager m_transforms;
 
     std::vector<Mesh::MeshPtr> m_meshes;
 
     std::vector<InstanceGPU> m_instances;
     std::vector<Material> m_materials;
+    std::vector<LightGPU> m_lights;
     std::vector<Vertex> m_vertices; // Vertices of **all** BVH.
     std::vector<Mesh::IndexType> m_indices; // Indices of **all** BVH.
     std::vector<BVHNodeGPU> m_nodes; // Nodes of all BVH.

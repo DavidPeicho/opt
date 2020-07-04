@@ -18,7 +18,8 @@ namespace albedo
 struct RenderInfo {
   uint width;
   uint height;
-  uint instanceCount;
+  uint instanceCount; // TODO: move to scene uniform
+  uint lightCount; // TODO: move to scene uniform
   uint frameCount;
 };
 
@@ -104,6 +105,7 @@ class Renderer
     backend::Buffer<Vertex> m_vertexBuffer;
     backend::Buffer<Mesh::IndexType> m_indicesBuffer;
     backend::Buffer<Material> m_materialBuffer;
+    backend::Buffer<LightGPU> m_lightsBuffer;
     backend::Buffer<Uniforms> m_uniformsBuffer;
 
 };

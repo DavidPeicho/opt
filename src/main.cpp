@@ -29,8 +29,10 @@
 
 #include <albedo/wgpu.h>
 
+#include <glm/glm.hpp>
 #include <albedoloader/gltf-loader.h>
 #include <albedo/debug/scene-debugger.h>
+#include <albedo/components/light.h>
 #include <albedo/scene.h>
 #include <albedo/renderer.h>
 
@@ -118,12 +120,24 @@ int main() {
 
   auto& scene = *sceneOptional;
 
+  // DEBUG
+  albedo::Entity lightEntity;
+  albedo::components::Light l{};
+  l.intensity = 20.0;
+  l.width = 3.0;
+  l.height = 2.0;
+
+  scene.lights().createComponent(lightEntity, std::move(l));
+
+  scene.transforms().createComponent(lightEntity);
+  auto lightTransform = scene.transforms().getComponent(lightEntity);
+  lightTransform->rotateGlobalX(glm::pi<float>() * 0.5);
+  lightTransform->translateGlobalY(3.5);
+  // END DEBUG
+
   std::cout << "Building scene...." << std::endl;
   scene.build();
   std::cout << "Scene built!" << std::endl;
-
-  albedo::debug::SceneDebugger::writeGraphiz(scene, 0, "debug.dot");
-  return 0;
 
   std::cout << "Updating scene...." << std::endl;
   scene.update();
@@ -131,7 +145,6 @@ int main() {
 
   albedo::Renderer renderer(deviceId, gSurfaceId);
   renderer.init(scene);
-
   render(renderer);
 
   glfwDestroyWindow(window);

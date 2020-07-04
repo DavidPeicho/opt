@@ -71,15 +71,20 @@ namespace
       {
           .binding = 6,
           .visibility = WGPUShaderStage_COMPUTE,
+          .ty = WGPUBindingType_ReadonlyStorageBuffer
+      },
+      {
+          .binding = 7,
+          .visibility = WGPUShaderStage_COMPUTE,
           .ty = WGPUBindingType_UniformBuffer
       },
       {
-        .binding = 7,
+        .binding = 8,
         .visibility = WGPUShaderStage_COMPUTE,
         .ty = WGPUBindingType_ReadonlyStorageTexture
       },
       {
-        .binding = 8,
+        .binding = 9,
         .visibility = WGPUShaderStage_COMPUTE,
         .ty = WGPUBindingType_WriteonlyStorageTexture
       }
@@ -181,8 +186,7 @@ Renderer::init(const Scene& scene)
   initBlittingPipeline(m_renderPipeline, m_blittingBindGroup, m_deviceId);
 
   m_info.instanceCount = scene.m_instances.size();
-
-  std::cout << "Instances Count = " << m_info.instanceCount << std::endl;
+  m_info.lightCount = scene.m_lights.size();
 
   m_renderInfoBuffer.setUsage(WGPUBufferUsage_COPY_DST | WGPUBufferUsage_UNIFORM);
   m_renderInfoBuffer.setSize(1);
@@ -193,6 +197,7 @@ Renderer::init(const Scene& scene)
   m_vertexBuffer.create(m_deviceId, scene.m_vertices);
   m_indicesBuffer.create(m_deviceId, scene.m_indices);
   m_materialBuffer.create(m_deviceId, scene.m_materials);
+  m_lightsBuffer.create(m_deviceId, scene.m_lights);
 
   m_uniformsBuffer.setUsage(WGPUBufferUsage_COPY_DST | WGPUBufferUsage_UNIFORM);
   m_uniformsBuffer.setSize(1);
@@ -266,9 +271,10 @@ Renderer::resize(uint32_t width, uint32_t height)
       { .binding = 3, .resource = m_indicesBuffer.getBindingResource() },
       { .binding = 4, .resource = m_vertexBuffer.getBindingResource() },
       { .binding = 5, .resource = m_materialBuffer.getBindingResource() },
-      { .binding = 6, .resource = m_uniformsBuffer.getBindingResource() },
-      { .binding = 7, .resource = view.getBindingResource() },
-      { .binding = 8, .resource = view2.getBindingResource() }
+      { .binding = 6, .resource = m_lightsBuffer.getBindingResource() },
+      { .binding = 7, .resource = m_uniformsBuffer.getBindingResource() },
+      { .binding = 8, .resource = view.getBindingResource() },
+      { .binding = 9, .resource = view2.getBindingResource() }
     });
 
     m_pathtracingBindGroup2.setLayout(m_pathtracingBindGroup.getLayout());
@@ -279,9 +285,10 @@ Renderer::resize(uint32_t width, uint32_t height)
       { .binding = 3, .resource = m_indicesBuffer.getBindingResource() },
       { .binding = 4, .resource = m_vertexBuffer.getBindingResource() },
       { .binding = 5, .resource = m_materialBuffer.getBindingResource() },
-      { .binding = 6, .resource = m_uniformsBuffer.getBindingResource() },
-      { .binding = 7, .resource = view2.getBindingResource() },
-      { .binding = 8, .resource = view.getBindingResource() }
+      { .binding = 6, .resource = m_lightsBuffer.getBindingResource() },
+      { .binding = 7, .resource = m_uniformsBuffer.getBindingResource() },
+      { .binding = 8, .resource = view2.getBindingResource() },
+      { .binding = 9, .resource = view.getBindingResource() }
     });
 
     m_blittingBindGroup.create(m_deviceId, {

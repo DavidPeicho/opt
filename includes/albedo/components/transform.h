@@ -26,6 +26,23 @@ struct Transform : public Component<Transform>
     isDirty = false;
   }
 
+  void
+  translateGlobalX(float);
+  void
+  translateGlobalY(float);
+  void
+  translateGlobalZ(float);
+
+  void
+  rotateGlobalX(float);
+  void
+  rotateGlobalY(float);
+  void
+  rotateGlobalZ(float);
+
+  glm::vec3
+  getWorldPosition() const;
+
   glm::mat4 modelToLocal;
   glm::mat4 localToWorld;
   std::optional<Transform::Id> parent;
@@ -75,6 +92,15 @@ class TransformManager
 
     OptionalRef<const glm::mat4>
     getWorldMatrix(const Entity&) const;
+
+    std::optional<const glm::vec3>
+    getWorldPosition(const Entity&) const;
+
+    inline OptionalRef<Transform>
+    getComponent(const Entity& e)
+    {
+      return m_components.getComponentData(e);
+    }
 
   private:
 
