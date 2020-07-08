@@ -32,6 +32,7 @@
 #include <glm/glm.hpp>
 #include <albedoloader/gltf-loader.h>
 #include <albedo/debug/scene-debugger.h>
+#include <albedo/controller.h>
 #include <albedo/components/light.h>
 #include <albedo/scene.h>
 #include <albedo/renderer.h>
@@ -41,29 +42,6 @@ WGPUSurfaceId gSurfaceId = 0;
 
 void request_adapter_callback(WGPUAdapterId received, void *userdata) {
     *(WGPUAdapterId*)userdata = received;
-}
-
-void render(albedo::Renderer& renderer)
-{
-  int width = 0;
-  int height = 0;
-
-  float lastTime = glfwGetTime();
-  float delta = 0.0;
-  while (!glfwWindowShouldClose(window))
-  {
-    float time = glfwGetTime();
-    delta = time - lastTime;
-
-    glfwGetWindowSize(window, &width, &height);
-    // Resize if needed.
-    renderer.resize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
-    renderer.startFrame(delta);
-    renderer.endFrame();
-    glfwPollEvents();
-
-    lastTime = time;
-  }
 }
 
 int main() {
@@ -145,7 +123,53 @@ int main() {
 
   albedo::Renderer renderer(deviceId, gSurfaceId);
   renderer.init(scene);
-  render(renderer);
+
+  albedo::components::PerspectiveCamera camera;
+  albedo::FPSCameraController controller;
+
+  int width = 0;
+  int height = 0;
+  float lastTime = glfwGetTime();
+  float delta = 0.0;
+
+  while (!glfwWindowShouldClose(window))
+  {
+    float time = glfwGetTime();
+    delta = time - lastTime;
+
+    // Inputs.
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) { controller.forward(); }
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+      controller.backward();
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+      controller.left();
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+      controller.right();
+
+    controller.update(delta);
+
+    glfwGetWindowSize(window, &width, &height);
+
+    // std::cout << glm::to_string(controller.getOrigin())
+    // << " " << glm::to_string(controller.getUp())
+    // << " " << glm::to_string(controller.getRight())
+    // << std::endl;
+
+    // Resize if needed.
+    renderer.resize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+    renderer.setCameraInfo(
+      camera,
+      controller.getOrigin(),
+      controller.getUp(),
+      controller.getRight()
+    );
+    renderer.startFrame(delta);
+    renderer.endFrame();
+
+    glfwPollEvents();
+
+    lastTime = time;
+  }
 
   glfwDestroyWindow(window);
   glfwTerminate();

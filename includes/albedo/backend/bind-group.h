@@ -24,6 +24,7 @@ class BindGroupLayout: public WGPUObject<WGPUBindGroupLayoutDescriptor>
 
   public:
 
+    using Ptr = std::shared_ptr<BindGroupLayout>;
     using Entries = std::initializer_list<WGPUBindGroupLayoutEntry>;
 
   public:

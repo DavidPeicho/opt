@@ -118,6 +118,15 @@ layout(set = 0, binding = 8, rgba32f) uniform readonly image2D uRenderTarget;
 
 layout(set = 0, binding = 9, rgba32f) uniform writeonly image2D uRenderTargetWrite;
 
+layout (set = 1, binding = 0) readonly uniform CameraUniformsBuffer {
+  vec3 origin;
+  float vFOV;
+  vec3 up;
+  float padding_0;
+  vec3 right;
+  float padding_1;
+} CameraUniforms;
+
 /* Utils */
 
 uint
@@ -197,16 +206,18 @@ generateRay(ivec2 coords)
   float half_w = float(RenderSettings.width) * 0.5;
   float half_h = float(RenderSettings.height) * 0.5;
 
-  float fovv = 45.0; // TODO: add to camera uniform buffer.
-  float dist = half_h / tan(fovv * TO_RAD_F * 0.5);
+  vec3 clip = vec3(
+    coords.x - half_w,
+    coords.y - half_h,
+    half_h / tan(CameraUniforms.vFOV * 0.5)
+  );
 
-  // TODO: use inverse projection matrix here instead.
+  ray.origin = CameraUniforms.origin;
 
-  ray.origin = vec3(0.0, 0.0, 0.0);
+  // TODO: pack direction directly?
+  vec3 dir = normalize(cross(CameraUniforms.up, CameraUniforms.right));
 
-  ray.dir.x = coords.x - half_w;
-  ray.dir.y = coords.y - half_h;
-  ray.dir.z = - dist;
+  ray.dir = clip.x * CameraUniforms.right + clip.y * CameraUniforms.up + clip.z * dir;
   ray.dir = normalize(ray.dir);
 
   return ray;
@@ -313,29 +324,6 @@ sceneHit(Ray ray, inout Intersection intersection)
       dist = t;
     }
   }
-  // DEBUG with one area light
-  #if 0
-  float xLen = 3.0;
-  float zLen = 1.0;
-  vec3 normal = vec3(.0, -1., 0.);
-  vec3 bitangent = vec3(0.0, 0.0, -1.0) * zLen;
-  vec3 tangent = vec3(1.0, 0.0, 0.0) * xLen;
-  vec3 o = vec3(0.0, 3.0, 0.0) - 0.5 * tangent - 0.5 * bitangent;
-  // ray, normal, origin, edge0, edge1
-  float tt = intersectPlane(
-    ray,
-    - normal,
-    o,
-    tangent,
-    bitangent
-  );
-  if (tt > 0.0 && tt < MAX_FLOAT)
-  {
-    intersection.emissive = vec3(1.0, 0.9, 0.8) * 30.0;
-    intersection.emitter = true;
-    return tt;
-  }
-  #endif
 
   for (uint i = 0; i < RenderSettings.instanceCount; ++i)
   {
@@ -372,6 +360,7 @@ sceneHit(Ray ray, inout Intersection intersection)
   return dist;
 }
 
+layout(local_size_x = 8, local_size_y = 8) in;
 void main()
 {
   ivec2 idx = ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
@@ -381,13 +370,12 @@ void main()
   ) | uint(1);
 
   Ray ray = generateRay(idx);
-  ray.origin.z = 10.0;
 
   vec3 throughput = vec3(1.0);
   vec4 radiance = vec4(vec3(0.0), 1.0);
 
   Intersection intersection;
-  for (uint bounces = 0; bounces < 4; ++bounces)
+  for (uint bounces = 0; bounces < 3; ++bounces)
   {
     intersection.emissive = vec3(0.0);
     intersection.emitter = false;
@@ -395,7 +383,7 @@ void main()
     float t = sceneHit(ray, intersection);
     if (t >= MAX_FLOAT)
     {
-      // radiance.rgb += throughput * 100.0;
+      radiance.rgb += throughput * 0.15;
       break;
     }
 
@@ -422,12 +410,20 @@ void main()
     BRDFSample brdf = LambertBRDF(normal, randState);
 
     Material mat = materials[intersection.materialIndex];
+
     vec3 directRadiance = mat.albedo.rgb * brdf.pdf;
     throughput *= directRadiance;
 
     // Diffuse bounce.
-    ray.origin += t * ray.dir + normal * 0.0001;
+    ray.origin += t * ray.dir + normal * EPSILON;
     ray.dir = brdf.dir;
+
+    // Russian Roulette.
+    float randnb = bounces > 1 ? rand(randState) : 0.0;
+    float probability = max(throughput.x, max(throughput.y, throughput.z)) + EPSILON;
+    if (randnb > probability) { break; }
+
+    throughput /= probability;
   }
 
   vec4 c = imageLoad(uRenderTarget, idx);

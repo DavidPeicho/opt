@@ -4,6 +4,8 @@
 
 #include <albedo/wgpu.h>
 
+#include <albedo/components/camera.h>
+
 #include <albedo/backend/buffer.h>
 #include <albedo/backend/bind-group.h>
 #include <albedo/backend/pipeline.h>
@@ -12,6 +14,8 @@
 
 namespace albedo
 {
+
+// TODO: make those structs inaccessible.
 
 // TODO: padding can be removed from the CPU as the buffer is copied only
 // from the byte 0 to the byte offset of the `height` field.
@@ -25,6 +29,15 @@ struct RenderInfo {
 
 struct Uniforms {
   float time;
+};
+
+struct CameraUniforms {
+  glm::vec3 origin;
+  float vFOV;
+  glm::vec3 up;
+  float padding_0;
+  glm::vec3 right;
+  float padding_1;
 };
 
 // TODO: add PIML? is it worth for people to access internal WGPU wrapper?
@@ -64,6 +77,14 @@ class Renderer
 
   public:
 
+    Renderer&
+    setCameraInfo(
+      const components::PerspectiveCamera&,
+      const glm::vec3& origin,
+      const glm::vec3& up,
+      const glm::vec3& right
+    );
+
     inline uint32_t
     getWidth() { return m_swapChainDescriptor.width; }
 
@@ -74,6 +95,7 @@ class Renderer
 
     RenderInfo m_info;
     Uniforms m_uniforms;
+    CameraUniforms m_cameraUniforms;
 
     WGPUDeviceId m_deviceId;
     WGPUSurfaceId m_surfaceId;
@@ -87,6 +109,7 @@ class Renderer
     // TODO: remove when migrating to a compute pass storing the result of
     // the light sampling in the Ray structure.
     backend::BindGroup m_pathtracingBindGroup2;
+    backend::BindGroup m_cameraBindGroup;
 
     backend::RenderPipeline m_renderPipeline;
     backend::BindGroup m_blittingBindGroup;
@@ -107,6 +130,7 @@ class Renderer
     backend::Buffer<Material> m_materialBuffer;
     backend::Buffer<LightGPU> m_lightsBuffer;
     backend::Buffer<Uniforms> m_uniformsBuffer;
+    backend::Buffer<CameraUniforms> m_cameraUniformsBuffer;
 
 };
 

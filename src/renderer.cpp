@@ -33,6 +33,7 @@ namespace
   initPathtracingPipeline(
     backend::ComputePipeline& pipeline,
     backend::BindGroup& bindGroup,
+    const backend::BindGroupLayout::Ptr& uniformsBindGroupLayout,
     WGPUDeviceId deviceId
   )
   {
@@ -93,7 +94,10 @@ namespace
     bindGroup.setLayout(bindGroupLayout);
 
     auto pipelineLayout = std::make_shared<backend::PipelineLayout>();
-    pipelineLayout->create(deviceId, { bindGroupLayout->id() });
+    pipelineLayout->create(deviceId, {
+      bindGroupLayout->id(),
+      uniformsBindGroupLayout->id()
+    });
 
     WGPUShaderModuleDescriptor moduleDescriptor {
       .code = readFile("./src/shaders/debug.comp.spv"),
@@ -182,9 +186,6 @@ Renderer::~Renderer()
 Renderer&
 Renderer::init(const Scene& scene)
 {
-  initPathtracingPipeline(m_pathtracingPipeline, m_pathtracingBindGroup, m_deviceId);
-  initBlittingPipeline(m_renderPipeline, m_blittingBindGroup, m_deviceId);
-
   m_info.instanceCount = scene.m_instances.size();
   m_info.lightCount = scene.m_lights.size();
 
@@ -202,6 +203,29 @@ Renderer::init(const Scene& scene)
   m_uniformsBuffer.setUsage(WGPUBufferUsage_COPY_DST | WGPUBufferUsage_UNIFORM);
   m_uniformsBuffer.setSize(1);
   m_uniformsBuffer.create(m_deviceId);
+
+  m_cameraUniformsBuffer.setUsage(WGPUBufferUsage_COPY_DST | WGPUBufferUsage_UNIFORM);
+  m_cameraUniformsBuffer.setSize(1);
+  m_cameraUniformsBuffer.create(m_deviceId);
+
+  auto uniformsBindGroupLayout = std::make_shared<backend::BindGroupLayout>();
+  uniformsBindGroupLayout->create(m_deviceId, {
+    {
+      .binding = 0,
+      .visibility = WGPUShaderStage_COMPUTE,
+      .ty = WGPUBindingType_UniformBuffer
+    }
+  });
+  m_cameraBindGroup.setLayout(uniformsBindGroupLayout);
+  m_cameraBindGroup.create(m_deviceId, {
+    { .binding = 0, .resource = m_cameraUniformsBuffer.getBindingResource() },
+  });
+
+  initPathtracingPipeline(
+    m_pathtracingPipeline, m_pathtracingBindGroup, uniformsBindGroupLayout,
+    m_deviceId
+  );
+  initBlittingPipeline(m_renderPipeline, m_blittingBindGroup, m_deviceId);
 
   // TODO: check for errors?
   m_swapChainId = wgpu_device_create_swap_chain(
@@ -318,8 +342,10 @@ Renderer::startFrame(float deltaTime)
   #ifdef ACCUMULATE
   m_uniforms.time += 1.0 + deltaTime;
   #endif
-  m_uniformsBuffer.flush(queue, &m_uniforms, 1);
 
+  m_uniformsBuffer.flush(queue, &m_uniforms, 1);
+  // TODO: flush only if camera info changes
+  m_cameraUniformsBuffer.flush(queue, &m_cameraUniforms, 1);
   // TODO: separate Frame Count from dimensions, and only update the uniform
   // buffer of the framecount. Maybe merge framecount and delta?
   m_renderInfoBuffer.flush(queue, &m_info, 1);
@@ -355,18 +381,15 @@ Renderer::startFrame(float deltaTime)
   );
   wgpu_compute_pass_set_pipeline(computePassId, m_pathtracingPipeline.id());
   #ifdef ACCUMULATE
-  if (m_info.frameCount % 2 == 0)
-  {
-    wgpu_compute_pass_set_bind_group(computePassId, 0, m_pathtracingBindGroup.id(), NULL, 0);
-  }
-  else
-  {
-    wgpu_compute_pass_set_bind_group(computePassId, 0, m_pathtracingBindGroup2.id(), NULL, 0);
-  }
+  const auto& binding = m_info.frameCount % 2 == 0 ?
+    m_pathtracingBindGroup : m_pathtracingBindGroup2;
+  wgpu_compute_pass_set_bind_group(computePassId, 0, binding.id(), NULL, 0);
+  wgpu_compute_pass_set_bind_group(computePassId, 1, m_cameraBindGroup.id(), NULL, 0);
   #else
   wgpu_compute_pass_set_bind_group(computePassId, 0, m_pathtracingBindGroup2.id(), NULL, 0);
+  wgpu_compute_pass_set_bind_group(computePassId, 1, m_cameraBindGroup.id(), NULL, 0);
   #endif
-  wgpu_compute_pass_dispatch(computePassId, m_info.width, m_info.height, 1);
+  wgpu_compute_pass_dispatch(computePassId, m_info.width / 8, m_info.height / 8, 1);
   wgpu_compute_pass_end_pass(computePassId);
 
   // 2. Blit to screen
@@ -395,5 +418,20 @@ Renderer::endFrame()
   return *this;
 }
 
+Renderer&
+Renderer::setCameraInfo(
+  const components::PerspectiveCamera& camera,
+  const glm::vec3& origin,
+  const glm::vec3& up,
+  const glm::vec3& right
+)
+{
+  m_cameraUniforms.origin = origin;
+  m_cameraUniforms.up = up;
+  m_cameraUniforms.right = right;
+  m_cameraUniforms.vFOV = camera.vFOV;
+  m_info.frameCount = 1;
+  return *this;
+}
 
 } // namespace albedo
