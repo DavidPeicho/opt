@@ -37,11 +37,36 @@
 #include <albedo/scene.h>
 #include <albedo/renderer.h>
 
+struct App
+{
+  glm::vec2 mouse;
+  glm::vec2 mouseDelta;
+};
+
 GLFWwindow* window = nullptr;
 WGPUSurfaceId gSurfaceId = 0;
+App gAppState;
 
-void request_adapter_callback(WGPUAdapterId received, void *userdata) {
-    *(WGPUAdapterId*)userdata = received;
+void request_adapter_callback(WGPUAdapterId received, void *userdata)
+{
+  *(WGPUAdapterId*)userdata = received;
+}
+
+void mouseCb(GLFWwindow* window, double xpos, double ypos)
+{
+  auto mouse = glm::vec2(xpos, ypos);
+  gAppState.mouseDelta = mouse - gAppState.mouse;
+  gAppState.mouse = std::move(mouse);
+
+  // TODO: remove the size getter. Normalization can be done at anther place.
+  int width = 1;
+  int height = 1;
+  glfwGetWindowSize(window, &width, &height);
+
+  gAppState.mouseDelta.x /= (float)width;
+  gAppState.mouseDelta.y /= (float)height;
+
+  std::cout << glm::to_string(gAppState.mouseDelta) << std::endl;
 }
 
 int main() {
@@ -58,6 +83,15 @@ int main() {
     printf("Failed to create window!");
     return 1;
   }
+
+  // Startup mouse position to avoid getting mouse jump.
+  double x = 0.0;
+  double y = 0.0;
+  glfwGetCursorPos(window, &x, &y);
+  gAppState.mouse = glm::vec2(x, y);
+
+  glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+  glfwSetCursorPosCallback(window, mouseCb);
 
   id metalLayer = [CAMetalLayer layer];
   NSWindow* nsWindow = glfwGetCocoaWindow(window);
@@ -125,12 +159,21 @@ int main() {
   renderer.init(scene);
 
   albedo::components::PerspectiveCamera camera;
-  albedo::FPSCameraController controller;
+  albedo::FPSCameraController controller(glm::vec3(0.0, 0.0, 10.0));
+  renderer.setCameraInfo(
+        camera,
+        controller.getOrigin(),
+        controller.getUp(),
+        controller.getRight()
+  );
 
   int width = 0;
   int height = 0;
   float lastTime = glfwGetTime();
   float delta = 0.0;
+
+  float speed = 0.5;
+  bool dirty = false;
 
   while (!glfwWindowShouldClose(window))
   {
@@ -138,14 +181,16 @@ int main() {
     delta = time - lastTime;
 
     // Inputs.
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) { controller.forward(); }
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+    { controller.forward(speed); }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-      controller.backward();
+    { controller.backward(speed); }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-      controller.left();
+    { controller.left(speed); }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-      controller.right();
+    { controller.right(speed); }
 
+    controller.rotate(gAppState.mouseDelta);
     controller.update(delta);
 
     glfwGetWindowSize(window, &width, &height);
@@ -157,12 +202,17 @@ int main() {
 
     // Resize if needed.
     renderer.resize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
-    renderer.setCameraInfo(
-      camera,
-      controller.getOrigin(),
-      controller.getUp(),
-      controller.getRight()
-    );
+
+    if (controller.isDirty())
+    {
+      renderer.setCameraInfo(
+        camera,
+        controller.getOrigin(),
+        controller.getUp(),
+        controller.getRight()
+      );
+    }
+
     renderer.startFrame(delta);
     renderer.endFrame();
 

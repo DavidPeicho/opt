@@ -10,8 +10,8 @@ class CameraController
   public:
 
     CameraController(
-      glm::vec3 origin = glm::vec3(0.0, 0.0, 1.0),
-      glm::vec3 target = glm::vec3(0.0)
+      glm::vec3 origin,
+      glm::vec3 target
     );
 
     virtual ~CameraController() { }
@@ -22,6 +22,9 @@ class CameraController
     update(float deltaTime) = 0;
 
   public:
+
+    inline void
+    setOrigin(const glm::vec3& origin) { m_origin = origin; }
 
     inline const glm::vec3&
     getOrigin() const { return m_origin; }
@@ -35,6 +38,9 @@ class CameraController
     inline const glm::vec3&
     getUp() const { return m_up; }
 
+    inline const bool
+    isDirty() const { return m_dirty; }
+
   protected:
 
     glm::vec3 m_origin;
@@ -42,7 +48,11 @@ class CameraController
     glm::vec3 m_up;
     glm::vec3 m_right;
 
+    float m_moveSpeed;
     float m_moveDamping;
+    float m_rotationDamping;
+
+    bool m_dirty;
 };
 
 class FPSCameraController: public CameraController
@@ -50,7 +60,10 @@ class FPSCameraController: public CameraController
 
   public:
 
-    FPSCameraController() noexcept;
+    FPSCameraController(
+      glm::vec3 origin = glm::vec3(0.0, 0.0, 1.0),
+      glm::vec3 target = glm::vec3(0.0)
+    ) noexcept;
 
   public:
 
@@ -58,6 +71,9 @@ class FPSCameraController: public CameraController
     update(float deltaTime = 1.0) override;
 
   public:
+
+    void
+    rotate(const glm::vec2& direction);
 
     void
     forward(float distance = 1.0);
@@ -73,7 +89,8 @@ class FPSCameraController: public CameraController
 
   private:
 
-    glm::vec4 m_localVelocity;
+    glm::vec3 m_localVelocity;
+    glm::vec2 m_localRotVelocity;
 
 };
 

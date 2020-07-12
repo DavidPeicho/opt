@@ -299,7 +299,7 @@ Renderer::resize(uint32_t width, uint32_t height)
       { .binding = 7, .resource = m_uniformsBuffer.getBindingResource() },
       { .binding = 8, .resource = view.getBindingResource() },
       { .binding = 9, .resource = view2.getBindingResource() }
-    });
+  });
 
     m_pathtracingBindGroup2.setLayout(m_pathtracingBindGroup.getLayout());
     m_pathtracingBindGroup2.create(m_deviceId, {
