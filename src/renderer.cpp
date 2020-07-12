@@ -158,33 +158,42 @@ namespace
   }
 }
 
-Renderer::Renderer(
-  WGPUDeviceId deviceId,
-  WGPUSurfaceId surfaceId,
-  uint32_t width,
-  uint32_t height
-)
-  : m_deviceId{deviceId}
-  , m_surfaceId{surfaceId}
+Renderer::Renderer() noexcept
 {
-  m_info.width = width;
-  m_info.height = height;
+  m_info.width = 0;
+  m_info.height = 0;
   m_info.frameCount = 1;
   m_uniforms.time = 0.0;
   m_swapChainDescriptor.usage = WGPUTextureUsage_OUTPUT_ATTACHMENT;
   m_swapChainDescriptor.format = WGPUTextureFormat_Bgra8Unorm;
   m_swapChainDescriptor.present_mode = WGPUPresentMode_Fifo;
-  m_swapChainDescriptor.width = width;
-  m_swapChainDescriptor.height = height;
+  m_swapChainDescriptor.width = 0;
+  m_swapChainDescriptor.height = 0;
 }
 
-Renderer::~Renderer()
+Renderer::~Renderer() noexcept
 {
   // TODO: free resources
 }
 
 Renderer&
-Renderer::init(const Scene& scene)
+Renderer::init(WGPUDeviceId deviceId, WGPUSurfaceId surfaceId)
+{
+  // TODO: delete data if deviceId changes.
+  // TODO: delete data if surfaceId changes.
+  m_deviceId = deviceId;
+  m_surfaceId = surfaceId;
+
+  // TODO: check for errors?
+  m_swapChainId = wgpu_device_create_swap_chain(
+    m_deviceId, m_surfaceId, &m_swapChainDescriptor
+  );
+
+  return *this;
+}
+
+Renderer&
+Renderer::buildTLAS(const Scene& scene)
 {
   m_info.instanceCount = scene.m_instances.size();
   m_info.lightCount = scene.m_lights.size();
@@ -226,11 +235,6 @@ Renderer::init(const Scene& scene)
     m_deviceId
   );
   initBlittingPipeline(m_renderPipeline, m_blittingBindGroup, m_deviceId);
-
-  // TODO: check for errors?
-  m_swapChainId = wgpu_device_create_swap_chain(
-    m_deviceId, m_surfaceId, &m_swapChainDescriptor
-  );
 
   m_rtSampler.setDescriptor(WGPUSamplerDescriptor {
     .address_mode_u = WGPUAddressMode_ClampToEdge,

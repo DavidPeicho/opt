@@ -46,14 +46,9 @@ class Renderer
 
   public:
 
-    Renderer(
-      WGPUDeviceId deviceId,
-      WGPUSurfaceId surfaceId,
-      uint32_t width = 1,
-      uint32_t height = 1
-    );
+    Renderer() noexcept;
 
-    ~Renderer();
+    ~Renderer() noexcept;
 
   public:
 
@@ -64,7 +59,10 @@ class Renderer
     // Could be a good idea to make the user explicitly do that and to give
     // him more control.
     Renderer&
-    init(const Scene& scene);
+    init(WGPUDeviceId deviceId, WGPUSurfaceId surfaceId);
+
+    Renderer&
+    buildTLAS(const Scene& scene);
 
     Renderer&
     resize(uint32_t width, uint32_t height);

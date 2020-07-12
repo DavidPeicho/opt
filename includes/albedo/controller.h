@@ -21,6 +21,9 @@ class CameraController
     virtual void
     update(float deltaTime) = 0;
 
+    // TODO: add more generic control method, such as `grab`, `move`, etc...
+    // It's pretty common to change controls at runtime.
+
   public:
 
     inline void
@@ -48,7 +51,10 @@ class CameraController
     glm::vec3 m_up;
     glm::vec3 m_right;
 
+    // TODO: a lot of parameters are actually dependant on the controller
+    // type used.
     float m_moveSpeed;
+    float m_rotSpeed;
     float m_moveDamping;
     float m_rotationDamping;
 

@@ -7,7 +7,6 @@ set(WGPU_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../Libraries/wgpu-native/ta
 set(WGPU_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../Libraries/wgpu-native/ffi/")
 set(GLFW3_INCLUDE_DIR $ENV{GLFW3_INCLUDE_DIR})
 
-
 set(TARGET_NAME webtracer)
 
 add_executable(webtracer src/main.cpp)
