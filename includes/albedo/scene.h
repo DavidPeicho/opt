@@ -61,7 +61,7 @@ struct BVHNodeGPU
 // TODO: use
 struct InstanceGPU
 {
-  glm::mat4 modelToWorld;
+  glm::mat4 worldToModel;
   uint32_t bvhRootIndex;
   uint32_t materialIndex;
   uint32_t padding_0;

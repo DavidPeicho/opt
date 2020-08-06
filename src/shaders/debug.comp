@@ -25,6 +25,7 @@ struct Intersection {
   uint materialIndex;
   vec2 uv;
   uint index;
+  uint instance;
   bool emitter;
 };
 
@@ -36,7 +37,7 @@ struct BRDFSample
 
 struct Instance
 {
-  mat4 modelToWorld;
+  mat4 worldToModel;
   uint bvhRootIndex;
   uint materialIndex;
   uint padding_0;
@@ -146,9 +147,25 @@ float rand(inout uint seed)
 }
 
 vec3
+transformPosition(vec3 position, mat4 transform)
+{
+  vec4 pos = transform * vec4(position, 1.0);
+  return pos.xyz / pos.w;
+}
+
+vec3
 transformDirection(vec3 direction, mat4 transform)
 {
   return normalize((transform * vec4(direction, 0.0)).xyz);
+}
+
+Ray
+transformRay(inout Ray ray, mat4 transform)
+{
+  Ray result;
+  result.origin = transformPosition(ray.origin, transform);
+  result.dir = transformDirection(ray.dir, transform);
+  return result;
 }
 
 // Implementation of Hammersley Points on the Hemisphere
@@ -163,7 +180,7 @@ randomCosineWeightedVector(inout uint seed)
   //   normalize(x, y, z);
 
   float theta = rand(seed) * TWO_PI;
-  float r = rand(seed);
+  float r = max(EPSILON, rand(seed));
   float rLen = sqrt(max(EPSILON, 1.0 - r));
 
   float z = sqrt(r); // weights the samples to tend the normal
@@ -240,6 +257,7 @@ intersectPlane(Ray ray, vec3 normal, vec3 origin, vec3 edge01, vec3 edge02)
 
   interProj = dot(edge02, intersection);
   if (interProj < EPSILON || interProj > dot(edge02, edge02)) { return MAX_FLOAT; }
+
   return t;
 }
 
@@ -264,6 +282,7 @@ intersectTriangle(Ray ray, uint startIndex, inout vec2 uv)
   float det = dot(e1, p);
 
   // Ray is parralel to edge.
+  if (det <= NEG_EPSILON) { return MAX_FLOAT; }
   if (det > NEG_EPSILON && det < EPSILON) { return MAX_FLOAT; }
 
   float invDet = 1.0 / det;
@@ -328,6 +347,11 @@ sceneHit(Ray ray, inout Intersection intersection)
   for (uint i = 0; i < RenderSettings.instanceCount; ++i)
   {
     Instance instance = instances[i];
+
+    // Performs intersection in model space.
+    Ray rayModel = transformRay(ray, instance.worldToModel);
+    // Ray rayModel = ray;
+
     uint nextIndex = instance.bvhRootIndex;
     while (nextIndex != INVALID_UINT)
     {
@@ -336,18 +360,20 @@ sceneHit(Ray ray, inout Intersection intersection)
       // Node is a leaf.
       if (node.primitiveStartIndex != INVALID_UINT)
       {
-        float t = intersectTriangle(ray, node.primitiveStartIndex, uv);
+        float t = intersectTriangle(rayModel, node.primitiveStartIndex, uv);
         if (t > 0.0 && t < dist)
         {
           intersection.uv = uv;
           intersection.index = node.primitiveStartIndex;
+          intersection.instance = i;
+          // TODO: remove material as we now pass instance directly.
           intersection.materialIndex = instance.materialIndex;
           intersection.emitter = false;
           dist = t;
         }
         nextIndex = node.nextNodeIndex;
       }
-      else if (!intersectAABB(ray, node.min, node.max))
+      else if (!intersectAABB(rayModel, node.min, node.max))
       {
         nextIndex = node.nextNodeIndex;
       }
@@ -375,7 +401,7 @@ void main()
   vec4 radiance = vec4(vec3(0.0), 1.0);
 
   Intersection intersection;
-  for (uint bounces = 0; bounces < 3; ++bounces)
+  for (uint bounces = 0; bounces < 2; ++bounces)
   {
     intersection.emissive = vec3(0.0);
     intersection.emitter = false;

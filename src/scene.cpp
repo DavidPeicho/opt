@@ -276,11 +276,6 @@ Scene::update()
       instance.normal.w = origin.x;
       instance.tangent.w = origin.y;
       instance.bitangent.w = origin.z;
-
-      // std::cout << glm::to_string(origin) << std::endl;
-      // std::cout << glm::to_string(instance.normal) << std::endl;
-      // std::cout << glm::to_string(instance.tangent) << std::endl;
-      // std::cout << glm::to_string(instance.bitangent) << std::endl;
     }
   }
 
@@ -303,28 +298,20 @@ Scene::update()
     }
     gpuInstance.bvhRootIndex = bvhRootIndex;
 
+    const auto& d = m_data.getComponentData(entity);
+    if (d) {
+      std::cout << "Name = " << d->name << std::endl;
+    }
     std::cout << "Root index = " << gpuInstance.bvhRootIndex << std::endl;
 
     const auto transformData = m_transforms.getWorldMatrix(entity);
     if (transformData)
     {
-      gpuInstance.modelToWorld = *transformData;
+      // TODO: save inverse.
+      gpuInstance.worldToModel = glm::inverse(*transformData);
+      std::cout << glm::to_string(gpuInstance.worldToModel) << std::endl;
     }
   }
-
-  #if 1
-  for (const auto& i: m_instances)
-  {
-    std::cout << "instances" << std::endl;
-    std::cout << glm::to_string(i.modelToWorld) << std::endl;
-  }
-
-  std::cout << "Materials per instance" << std::endl;
-  for (const auto& i: m_instances)
-  {
-    std::cout << glm::to_string(m_materials[i.materialIndex].color) << std::endl;
-  }
-  #endif
 
   return *this;
 }
