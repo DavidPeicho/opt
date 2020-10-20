@@ -163,6 +163,18 @@ Ray
 transformRay(inout Ray ray, mat4 transform)
 {
   Ray result;
+
+  // TODO: do that in a more optimized way.
+  vec3 forward = normalize(cross(CameraUniforms.up, CameraUniforms.right));
+  mat4 invViewMatrix = inverse(
+    mat4(
+      vec4(CameraUniforms.right, 0.0),
+      vec4(CameraUniforms.up, 0.0),
+      vec4(forward, 0.0),
+      vec4(CameraUniforms.origin, 1.0)
+    )
+  );
+
   result.origin = transformPosition(ray.origin, transform);
   result.dir = transformDirection(ray.dir, transform);
   return result;

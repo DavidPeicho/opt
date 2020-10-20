@@ -213,24 +213,19 @@ GLTFLoader::processNode(
     const auto& r = node.rotation;
     const auto& s = node.scale;
 
-    transform.modelToLocal = glm::scale(
+    // @todo: remove temporary allocations.
+    auto scale = glm::scale(
       glm::mat4(1.0),
       s.size() > 0 ? glm::vec3(s[0], s[1], s[2]) : glm::vec3(1.0)
     );
-
-    const auto rotQuat = r.size() > 0 ? glm::quat(r[0], r[1], r[2], r[3]) : glm::quat();
-    transform.modelToLocal = glm::mat4_cast(rotQuat) * transform.modelToLocal;
-
-    std::cout << glm::to_string(transform.modelToLocal) << std::endl;
-
-    transform.modelToLocal = glm::translate(
-      transform.modelToLocal,
+    auto translate = glm::translate(
+      glm::mat4(1.0),
       t.size() > 0 ? glm::vec3(t[0], t[1], t[2]) : glm::vec3(0.0)
     );
-
-    std::cout << glm::to_string(transform.modelToLocal) << std::endl;
-
-
+    auto rot = glm::mat4_cast(
+      r.size() > 0 ? glm::quat(r[3], r[0], r[1], r[2]) : glm::quat()
+    );
+    transform.modelToLocal = translate * rot * scale;
   }
 
   if (node.mesh >= 0)
