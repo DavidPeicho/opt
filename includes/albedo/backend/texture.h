@@ -25,8 +25,8 @@ class TextureSampler: public WGPUObject<WGPUSamplerDescriptor>
 
   public:
 
-    WGPUBindingResource
-    getBindingResource() const;
+    WGPUBindGroupEntry
+    createBindGroupEntry(uint32_t binding) const;
 
 };
 
@@ -68,8 +68,8 @@ class TextureView: public WGPUObject<WGPUTextureViewDescriptor>
       return *this;
     }
 
-    WGPUBindingResource
-    getBindingResource() const;
+    WGPUBindGroupEntry
+    createBindGroupEntry(uint32_t binding) const;
 
   private:
 

@@ -69,8 +69,8 @@ class Buffer
     void
     flush(WGPUQueueId queueId, const T* const data, size_t start, size_t count);
 
-    WGPUBindingResource
-    getBindingResource(size_t offset = 0) const;
+    WGPUBindGroupEntry
+    createBindGroupEntry(uint32_t binding, size_t offset = 0) const;
 
     inline WGPUBindGroupId
     id() const { return m_id; }

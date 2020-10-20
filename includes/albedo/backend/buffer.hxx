@@ -131,18 +131,17 @@ Buffer<T>::flush(WGPUQueueId queueId, const T* const data, size_t start, size_t 
 }
 
 template <typename T>
-WGPUBindingResource
-Buffer<T>::getBindingResource(size_t offset) const
+WGPUBindGroupEntry
+Buffer<T>::createBindGroupEntry(uint32_t binding, size_t offset) const
 {
-  WGPUBufferBinding buffer;
-  buffer.buffer = m_id;
-  buffer.size = getByteSize();
-  buffer.offset = offset;
-
-  WGPUBindingResource r;
-  r.tag = WGPUBindingResource_Buffer;
-  r.buffer = WGPUBindingResource_WGPUBuffer_Body { ._0 = buffer };
-  return r;
+  return WGPUBindGroupEntry {
+    .binding = binding,
+    .buffer = m_id,
+    .size = getByteSize(),
+    .offset = offset,
+    .sampler = 0,
+    .texture_view = 0
+  };
 }
 
 } // namespace backend

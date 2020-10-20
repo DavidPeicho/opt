@@ -10,7 +10,8 @@ namespace albedo
 
 namespace
 {
-  WGPUU32Array readFile(const char *name)
+  WGPUShaderSource
+  readFile(const char *name)
   {
     FILE *file = fopen(name, "rb");
     if (!file) {
@@ -23,7 +24,7 @@ namespace
     fseek(file, 0, SEEK_SET);
     fread(bytes, 1, length, file);
     fclose(file);
-    return (WGPUU32Array){
+    return (WGPUShaderSource){
         .bytes = (uint32_t*) bytes,
         .length = static_cast<uintptr_t>(length / 4),
     };
@@ -82,12 +83,20 @@ namespace
       {
         .binding = 8,
         .visibility = WGPUShaderStage_COMPUTE,
-        .ty = WGPUBindingType_ReadonlyStorageTexture
+        .ty = WGPUBindingType_ReadonlyStorageTexture,
+        .has_dynamic_offset = false,
+        .multisampled = false,
+        .view_dimension = WGPUTextureViewDimension_D2,
+        .texture_component_type = WGPUTextureComponentType_Float
       },
       {
         .binding = 9,
         .visibility = WGPUShaderStage_COMPUTE,
-        .ty = WGPUBindingType_WriteonlyStorageTexture
+        .ty = WGPUBindingType_WriteonlyStorageTexture,
+        .has_dynamic_offset = false,
+        .multisampled = false,
+        .view_dimension = WGPUTextureViewDimension_D2,
+        .texture_component_type = WGPUTextureComponentType_Float
       }
     });
 
@@ -99,11 +108,8 @@ namespace
       uniformsBindGroupLayout->id()
     });
 
-    WGPUShaderModuleDescriptor moduleDescriptor {
-      .code = readFile("./src/shaders/debug.comp.spv"),
-    };
     WGPUShaderModuleId module = wgpu_device_create_shader_module(
-      deviceId, &moduleDescriptor
+      deviceId, readFile("./src/shaders/debug.comp.spv")
     );
 
     pipeline.bindShader(module, "main");
@@ -142,14 +148,12 @@ namespace
     auto pipelineLayout = std::make_shared<backend::PipelineLayout>();
     pipelineLayout->create(deviceId, { bindGroupLayout->id() });
 
-    WGPUShaderModuleDescriptor vertexModuleDescriptor{
-      .code = readFile("./src/shaders/blitting.vert.spv"),
-    };
-    WGPUShaderModuleDescriptor fragModuleDescriptor{
-      .code = readFile("./src/shaders/blitting.frag.spv"),
-    };
-    WGPUShaderModuleId vertexShader = wgpu_device_create_shader_module(deviceId, &vertexModuleDescriptor);
-    WGPUShaderModuleId fragmentShader = wgpu_device_create_shader_module(deviceId, &fragModuleDescriptor);
+    WGPUShaderModuleId vertexShader = wgpu_device_create_shader_module(
+      deviceId, readFile("./src/shaders/blitting.vert.spv")
+    );
+    WGPUShaderModuleId fragmentShader = wgpu_device_create_shader_module(
+      deviceId, readFile("./src/shaders/blitting.frag.spv")
+    );
 
     pipeline.bindVertexShader(vertexShader, "main");
     pipeline.bindFragmentShader(fragmentShader, "main");
@@ -227,7 +231,7 @@ Renderer::buildTLAS(const Scene& scene)
   });
   m_cameraBindGroup.setLayout(uniformsBindGroupLayout);
   m_cameraBindGroup.create(m_deviceId, {
-    { .binding = 0, .resource = m_cameraUniformsBuffer.getBindingResource() },
+    m_cameraUniformsBuffer.createBindGroupEntry(0)
   });
 
   initPathtracingPipeline(
@@ -245,7 +249,7 @@ Renderer::buildTLAS(const Scene& scene)
     .mipmap_filter = WGPUFilterMode_Nearest,
     .lod_min_clamp = 0,
     .lod_max_clamp = 0xffffffff,
-    .compare = WGPUCompareFunction_Equal
+    .compare = WGPUCompareFunction_Undefined
   });
   m_rtSampler.create(m_deviceId);
 
@@ -293,36 +297,36 @@ Renderer::resize(uint32_t width, uint32_t height)
     // Needed because the texture changes.
     // TODO: create a separate bindgroup for the texture?
     m_pathtracingBindGroup.create(m_deviceId, {
-      { .binding = 0, .resource = m_renderInfoBuffer.getBindingResource() },
-      { .binding = 1, .resource = m_instanceBuffer.getBindingResource() },
-      { .binding = 2, .resource = m_nodesBuffer.getBindingResource() },
-      { .binding = 3, .resource = m_indicesBuffer.getBindingResource() },
-      { .binding = 4, .resource = m_vertexBuffer.getBindingResource() },
-      { .binding = 5, .resource = m_materialBuffer.getBindingResource() },
-      { .binding = 6, .resource = m_lightsBuffer.getBindingResource() },
-      { .binding = 7, .resource = m_uniformsBuffer.getBindingResource() },
-      { .binding = 8, .resource = view.getBindingResource() },
-      { .binding = 9, .resource = view2.getBindingResource() }
-  });
+      m_renderInfoBuffer.createBindGroupEntry(0),
+      m_instanceBuffer.createBindGroupEntry(1),
+      m_nodesBuffer.createBindGroupEntry(2),
+      m_indicesBuffer.createBindGroupEntry(3),
+      m_vertexBuffer.createBindGroupEntry(4),
+      m_materialBuffer.createBindGroupEntry(5),
+      m_lightsBuffer.createBindGroupEntry(6),
+      m_uniformsBuffer.createBindGroupEntry(7),
+      view.createBindGroupEntry(8),
+      view2.createBindGroupEntry(9),
+    });
 
     m_pathtracingBindGroup2.setLayout(m_pathtracingBindGroup.getLayout());
     m_pathtracingBindGroup2.create(m_deviceId, {
-      { .binding = 0, .resource = m_renderInfoBuffer.getBindingResource() },
-      { .binding = 1, .resource = m_instanceBuffer.getBindingResource() },
-      { .binding = 2, .resource = m_nodesBuffer.getBindingResource() },
-      { .binding = 3, .resource = m_indicesBuffer.getBindingResource() },
-      { .binding = 4, .resource = m_vertexBuffer.getBindingResource() },
-      { .binding = 5, .resource = m_materialBuffer.getBindingResource() },
-      { .binding = 6, .resource = m_lightsBuffer.getBindingResource() },
-      { .binding = 7, .resource = m_uniformsBuffer.getBindingResource() },
-      { .binding = 8, .resource = view2.getBindingResource() },
-      { .binding = 9, .resource = view.getBindingResource() }
+      m_renderInfoBuffer.createBindGroupEntry(0),
+      m_instanceBuffer.createBindGroupEntry(1),
+      m_nodesBuffer.createBindGroupEntry(2),
+      m_indicesBuffer.createBindGroupEntry(3),
+      m_vertexBuffer.createBindGroupEntry(4),
+      m_materialBuffer.createBindGroupEntry(5),
+      m_lightsBuffer.createBindGroupEntry(6),
+      m_uniformsBuffer.createBindGroupEntry(7),
+      view2.createBindGroupEntry(8),
+      view.createBindGroupEntry(9)
     });
 
     m_blittingBindGroup.create(m_deviceId, {
-      { .binding = 0, .resource = m_renderInfoBuffer.getBindingResource() },
-      { .binding = 1, .resource = m_rtSampler.getBindingResource() },
-      { .binding = 2, .resource = view.getBindingResource() }
+      m_renderInfoBuffer.createBindGroupEntry(0),
+      m_rtSampler.createBindGroupEntry(1),
+      view.createBindGroupEntry(2)
     });
 
     m_info.frameCount = 1;
@@ -362,9 +366,13 @@ Renderer::startFrame(float deltaTime)
     colorAttachments[1] = {
       {
         .attachment = nextSwapTexture.view_id,
-        .load_op = WGPULoadOp_Clear,
-        .store_op = WGPUStoreOp_Store,
-        .clear_color = WGPUColor_GREEN,
+        .resolve_target = 0,
+        .channel = {
+            .load_op = WGPULoadOp_Clear,
+            .store_op = WGPUStoreOp_Store,
+            .clear_value = WGPUColor_GREEN,
+            .read_only = false,
+        }
       },
   };
 
@@ -380,7 +388,7 @@ Renderer::startFrame(float deltaTime)
 
   // 1. Run pathtracing
 
-  WGPUComputePassId computePassId = wgpu_command_encoder_begin_compute_pass(
+  WGPUComputePass *computePassId = wgpu_command_encoder_begin_compute_pass(
     m_commandEncoder, NULL
   );
   wgpu_compute_pass_set_pipeline(computePassId, m_pathtracingPipeline.id());
@@ -398,7 +406,7 @@ Renderer::startFrame(float deltaTime)
 
   // 2. Blit to screen
 
-  WGPURenderPassId rpass = wgpu_command_encoder_begin_render_pass(m_commandEncoder, &renderPassDesc);
+  WGPURenderPass *rpass = wgpu_command_encoder_begin_render_pass(m_commandEncoder, &renderPassDesc);
   wgpu_render_pass_set_pipeline(rpass, m_renderPipeline.id());
   wgpu_render_pass_set_bind_group(rpass, 0, m_blittingBindGroup.id(), NULL, 0);
   wgpu_render_pass_draw(rpass, 3, 1, 0, 0);

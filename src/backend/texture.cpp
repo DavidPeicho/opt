@@ -21,11 +21,11 @@ TextureSampler::create(WGPUDeviceId deviceId)
   m_id = wgpu_device_create_sampler(deviceId, &m_descriptor);
 }
 
-WGPUBindingResource
-TextureSampler::getBindingResource() const
+WGPUBindGroupEntry
+TextureSampler::createBindGroupEntry(uint32_t binding) const
 {
-  return WGPUBindingResource {
-    .tag = WGPUBindingResource_Sampler,
+  return WGPUBindGroupEntry {
+    .binding = binding,
     .sampler = m_id
   };
 }
@@ -54,11 +54,11 @@ TextureView::create()
   m_id = wgpu_texture_create_view(m_textureId, &m_descriptor);
 }
 
-WGPUBindingResource
-TextureView::getBindingResource() const
+WGPUBindGroupEntry
+TextureView::createBindGroupEntry(uint32_t binding) const
 {
-  return WGPUBindingResource {
-    .tag = WGPUBindingResource_TextureView,
+  return WGPUBindGroupEntry {
+    .binding = binding,
     .texture_view = m_id
   };
 }

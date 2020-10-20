@@ -93,7 +93,13 @@ App::App()
     .max_bind_groups = 2
   };
 
-  WGPUDeviceId deviceId = wgpu_adapter_request_device(adapterId, 0, &limits, NULL);
+  WGPUDeviceId deviceId = wgpu_adapter_request_device(
+    adapterId,
+    0,
+    &limits,
+    true,
+    NULL
+  );
 
   glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   glfwSetCursorPosCallback(m_window, App::mouseCallback);
