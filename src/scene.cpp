@@ -298,18 +298,18 @@ Scene::update()
     }
     gpuInstance.bvhRootIndex = bvhRootIndex;
 
-    const auto& d = m_data.getComponentData(entity);
-    if (d) {
-      std::cout << "Name = " << d->name << std::endl;
-    }
-    std::cout << "Root index = " << gpuInstance.bvhRootIndex << std::endl;
+    // const auto& d = m_data.getComponentData(entity);
+    // if (d) {
+    //   std::cout << "Name = " << d->name << std::endl;
+    // }
+    // std::cout << "Root index = " << gpuInstance.bvhRootIndex << std::endl;
 
     const auto transformData = m_transforms.getWorldMatrix(entity);
     if (transformData)
     {
       // TODO: save inverse.
       gpuInstance.worldToModel = glm::inverse(*transformData);
-      std::cout << glm::to_string(gpuInstance.worldToModel) << std::endl;
+      // std::cout << glm::to_string(gpuInstance.worldToModel) << std::endl;
     }
   }
 

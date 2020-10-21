@@ -31,6 +31,7 @@ struct Uniforms {
   float time;
 };
 
+// @todo: replace by matrix4
 struct CameraUniforms {
   glm::vec3 origin;
   float vFOV;
@@ -83,6 +84,9 @@ class Renderer
       const glm::vec3& right
     );
 
+    Renderer&
+    setProbe(float *data, uint width, uint height, uint comp = 3);
+
     inline uint32_t
     getWidth() { return m_swapChainDescriptor.width; }
 
@@ -117,6 +121,9 @@ class Renderer
     // the light sampling in the Ray structure.
     backend::Texture m_renderTarget2;
     backend::TextureSampler m_rtSampler;
+
+    backend::Texture m_probe;
+    backend::TextureSampler m_probeSampler;
 
     WGPUCommandEncoderId m_commandEncoder; // TODO: refactor out?
 

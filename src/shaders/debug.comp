@@ -119,6 +119,9 @@ layout(set = 0, binding = 8, rgba32f) uniform readonly image2D uRenderTarget;
 
 layout(set = 0, binding = 9, rgba32f) uniform writeonly image2D uRenderTargetWrite;
 
+layout(set = 0, binding = 10) uniform texture2D uProbe;
+layout(set = 0, binding = 11 ) uniform sampler uProbeSampler;
+
 layout (set = 1, binding = 0) readonly uniform CameraUniformsBuffer {
   vec3 origin;
   float vFOV;
@@ -163,18 +166,6 @@ Ray
 transformRay(inout Ray ray, mat4 transform)
 {
   Ray result;
-
-  // TODO: do that in a more optimized way.
-  vec3 forward = normalize(cross(CameraUniforms.up, CameraUniforms.right));
-  mat4 invViewMatrix = inverse(
-    mat4(
-      vec4(CameraUniforms.right, 0.0),
-      vec4(CameraUniforms.up, 0.0),
-      vec4(forward, 0.0),
-      vec4(CameraUniforms.origin, 1.0)
-    )
-  );
-
   result.origin = transformPosition(ray.origin, transform);
   result.dir = transformDirection(ray.dir, transform);
   return result;
@@ -413,7 +404,7 @@ void main()
   vec4 radiance = vec4(vec3(0.0), 1.0);
 
   Intersection intersection;
-  for (uint bounces = 0; bounces < 2; ++bounces)
+  for (uint bounces = 0; bounces < 4; ++bounces)
   {
     intersection.emissive = vec3(0.0);
     intersection.emitter = false;
@@ -421,7 +412,8 @@ void main()
     float t = sceneHit(ray, intersection);
     if (t >= MAX_FLOAT)
     {
-      radiance.rgb += throughput * 0.15;
+      // radiance.rgb += throughput * 0.15;
+      radiance.rgb = texture(sampler2D(uProbe, uProbeSampler), ray.dir.xy).rgb;
       break;
     }
 

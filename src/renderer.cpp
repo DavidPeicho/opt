@@ -97,6 +97,20 @@ namespace
         .multisampled = false,
         .view_dimension = WGPUTextureViewDimension_D2,
         .texture_component_type = WGPUTextureComponentType_Float
+      },
+      {
+        .binding = 10,
+        .visibility = WGPUShaderStage_COMPUTE,
+        .ty = WGPUBindingType_SampledTexture,
+        .has_dynamic_offset = false,
+        .multisampled = false,
+        .view_dimension = WGPUTextureViewDimension_D2,
+        .texture_component_type = WGPUTextureComponentType_Float
+      },
+      {
+        .binding = 11,
+        .visibility = WGPUShaderStage_COMPUTE,
+        .ty = WGPUBindingType_Sampler
       }
     });
 
@@ -253,6 +267,19 @@ Renderer::buildTLAS(const Scene& scene)
   });
   m_rtSampler.create(m_deviceId);
 
+  m_probeSampler.setDescriptor(WGPUSamplerDescriptor {
+    .address_mode_u = WGPUAddressMode_ClampToEdge,
+    .address_mode_v = WGPUAddressMode_ClampToEdge,
+    .address_mode_w = WGPUAddressMode_ClampToEdge,
+    .mag_filter = WGPUFilterMode_Linear,
+    .min_filter = WGPUFilterMode_Linear,
+    .mipmap_filter = WGPUFilterMode_Nearest,
+    .lod_min_clamp = 0,
+    .lod_max_clamp = 0xffffffff,
+    .compare = WGPUCompareFunction_Undefined
+  });
+  m_probeSampler.create(m_deviceId);
+
   return *this;
 }
 
@@ -294,6 +321,9 @@ Renderer::resize(uint32_t width, uint32_t height)
     auto view2 = m_renderTarget2.createDefaultView();
     view2.create();
 
+    auto probeView = m_probe.createDefaultView();
+    probeView.create();
+
     // Needed because the texture changes.
     // TODO: create a separate bindgroup for the texture?
     m_pathtracingBindGroup.create(m_deviceId, {
@@ -307,6 +337,8 @@ Renderer::resize(uint32_t width, uint32_t height)
       m_uniformsBuffer.createBindGroupEntry(7),
       view.createBindGroupEntry(8),
       view2.createBindGroupEntry(9),
+      probeView.createBindGroupEntry(10),
+      m_probeSampler.createBindGroupEntry(11)
     });
 
     m_pathtracingBindGroup2.setLayout(m_pathtracingBindGroup.getLayout());
@@ -320,7 +352,9 @@ Renderer::resize(uint32_t width, uint32_t height)
       m_lightsBuffer.createBindGroupEntry(6),
       m_uniformsBuffer.createBindGroupEntry(7),
       view2.createBindGroupEntry(8),
-      view.createBindGroupEntry(9)
+      view.createBindGroupEntry(9),
+      probeView.createBindGroupEntry(10),
+      m_probeSampler.createBindGroupEntry(11)
     });
 
     m_blittingBindGroup.create(m_deviceId, {
@@ -443,6 +477,45 @@ Renderer::setCameraInfo(
   m_cameraUniforms.right = right;
   m_cameraUniforms.vFOV = camera.vFOV;
   m_info.frameCount = 1;
+  return *this;
+}
+
+Renderer&
+Renderer::setProbe(float *data, uint width, uint height, uint comp)
+{
+  auto extent = WGPUExtent3d { .width = width, .height = height, .depth = 1 };
+  auto rtDescriptor = WGPUTextureDescriptor {
+    .label = "probe",
+    .size = extent,
+    .mip_level_count = 1,
+    .sample_count = 1,
+    .dimension = WGPUTextureDimension_D2,
+    .format = WGPUTextureFormat_Rgba32Float,
+    .usage = WGPUTextureUsage_SAMPLED | WGPUTextureUsage_COPY_DST
+  };
+  m_probe.setDescriptor(rtDescriptor);
+  m_probe.create(m_deviceId);
+
+  auto queue = wgpu_device_get_default_queue(m_deviceId);
+  auto view = WGPUTextureCopyView {
+    .texture = m_probe.id(),
+    .mip_level = 0,
+    .origin = WGPUOrigin3d_ZERO,
+  };
+  uint32_t bytes_per_row = 4 * sizeof (float) * width;
+  auto layout = WGPUTextureDataLayout {
+    .offset = 0,
+    .bytes_per_row = bytes_per_row,
+    .rows_per_image = height
+  };
+  wgpu_queue_write_texture(
+    queue,
+    &view,
+    reinterpret_cast<uint8_t*>(data),
+    bytes_per_row * height,
+    &layout,
+    &extent
+  );
   return *this;
 }
 

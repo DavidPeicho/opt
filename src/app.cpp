@@ -21,6 +21,10 @@
 #include "app.h"
 #include <albedo/wgpu.h>
 
+// @todo: that's gross, fix that.
+#define STB_IMAGE_IMPLEMENTATION
+#include "plugins/includes/albedoloader/stb_image.h"
+
 #include <glm/glm.hpp>
 
 namespace albedo
@@ -106,6 +110,27 @@ App::App()
 
   m_renderer.init(adapterId, surfaceId);
   m_controller = new FPSCameraController(glm::vec3(0.0, 0.0, 10.0));
+
+  std::cout << "Loading probe..." << std::endl;
+  int imgWidth = 0;
+  int imgHeight = 0;
+  int imgComp = 0;
+  float *data = stbi_loadf("./scenes/uffizi-large.hdr", &imgWidth, &imgHeight, &imgComp, 4);
+  if (data && imgWidth > 0 && imgHeight > 0 && imgComp > 0)
+  {
+    std::cout << imgComp << std::endl;
+    m_renderer.setProbe(
+      data,
+      static_cast<uint>(imgWidth),
+      static_cast<uint>(imgHeight),
+      static_cast<uint>(imgComp)
+    );
+  }
+  else
+  {
+    std::cout << "probe loading failed!" << std::endl;
+  }
+
 }
 
 App::~App() { destroy(); }
