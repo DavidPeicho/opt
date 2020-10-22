@@ -146,7 +146,7 @@ App::run() noexcept
   // DEBUG
   albedo::Entity lightEntity;
   albedo::components::Light l{};
-  l.intensity = 20.0;
+  l.intensity = 2.5;
   l.width = 3.0;
   l.height = 2.0;
   m_scene->lights().createComponent(lightEntity, std::move(l));

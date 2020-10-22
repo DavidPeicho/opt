@@ -105,18 +105,17 @@ layout (set = 0, binding = 5, std430) readonly buffer MaterialBuffer {
   Material materials[];
 };
 
-// TODO: move to uniform?
+// @todo: move to uniform?
 layout (set = 0, binding = 6, std430) readonly buffer LightBuffer {
   Light lights[];
 };
 
-// TODO: move to uniform?
+// @todo: move to uniform?
 layout (set = 0, binding = 7) uniform UniformsBuffer {
   float iFrame;
 } Uniforms;
 
 layout(set = 0, binding = 8, rgba32f) uniform readonly image2D uRenderTarget;
-
 layout(set = 0, binding = 9, rgba32f) uniform writeonly image2D uRenderTargetWrite;
 
 layout(set = 0, binding = 10) uniform texture2D uProbe;
@@ -147,6 +146,16 @@ WangHash(inout uint seed)
 float rand(inout uint seed)
 {
   return float(WangHash(seed)) / 4294967296.0;
+}
+
+vec2
+cartesianToEqui(vec3 dir)
+{
+  dir = dir.xzy;
+  vec2 longlat = vec2(atan(dir.y, dir.x), acos(dir.z));
+  longlat.x += PI_F;
+  // Normalize
+  return longlat / vec2(2.0 * PI_F, PI_F);
 }
 
 vec3
@@ -412,8 +421,10 @@ void main()
     float t = sceneHit(ray, intersection);
     if (t >= MAX_FLOAT)
     {
-      // radiance.rgb += throughput * 0.15;
-      radiance.rgb = texture(sampler2D(uProbe, uProbeSampler), ray.dir.xy).rgb;
+      vec2 uv = cartesianToEqui(ray.dir);
+      vec3 sky = texture(sampler2D(uProbe, uProbeSampler), uv).rgb;
+      // radiance.rgb += throughput * sky;
+      radiance.rgb += throughput;
       break;
     }
 
