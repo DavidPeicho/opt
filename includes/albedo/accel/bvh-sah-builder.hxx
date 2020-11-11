@@ -119,6 +119,19 @@ recursiveBuild(
 
   // @todo: if the axis len is too small, split in half.
 
+  if (splitAxis != 1)
+  {
+    std::cout << uint(splitAxis) << std::endl;
+  }
+  // if (splitAxisLen < 0.01)
+  // {
+  //   std::cout << "SMALLLLL" << std::endl;
+  // }
+  // else
+  // {
+  //   std::cout << "BIGGGGGGGG" << std::endl;
+  // }
+
   //
   // Step 1: initializes every bin computing, for each triangle, its associated
   // bin. Each bin bounding box and number of primitives is updated.
@@ -158,23 +171,30 @@ recursiveBuild(
   Mesh::IndexType mid = iterator - nodes.begin();
   if (mid <= start || mid >= end)
   {
-    // @todo: find why it mostly ends up here.
-    // std::cout << "HALF" << std::endl;
     mid = (start + end) * 0.5;
   }
 
-  auto leftChild = recursiveBuild<BinCount>(nodes, bins, start, mid);
-  auto rightChild = recursiveBuild<BinCount>(nodes, bins, mid, end);
-
+  const auto leftChild = recursiveBuild<BinCount>(nodes, bins, start, mid);
+  const auto rightChild = recursiveBuild<BinCount>(nodes, bins, mid, end);
   node.leftChild = leftChild;
   node.rightChild = rightChild;
+
+  float leftSurface = std::numeric_limits<float>::min();
+  float rightSurface = std::numeric_limits<float>::min();
   if (leftChild != BVHNode::InternalNodeMask)
   {
     node.forestSize += 1 + nodes[leftChild].forestSize;
+    leftSurface = nodes[leftChild].aabb.getSurfaceArea();
   }
   if (rightChild != BVHNode::InternalNodeMask)
   {
     node.forestSize += 1 + nodes[rightChild].forestSize;
+    rightSurface = nodes[rightChild].aabb.getSurfaceArea();
+  }
+
+  if (rightSurface > leftSurface)
+  {
+    std::swap(node.leftChild, node.rightChild);
   }
 
   return nodeIndex;

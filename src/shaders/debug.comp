@@ -14,7 +14,7 @@
 #define MAX_UINT 0xFFFFFFFF
 #define INVALID_UINT MAX_UINT
 
-#define DEBUG_BOX
+// #define DEBUG_BOX
 #define NB_BOUNCES 2
 
 // TODO: move to intersection pass.
@@ -316,25 +316,31 @@ intersectTriangle(Ray ray, uint startIndex, inout vec2 uv)
   return dot(e2, q) * invDet;
 }
 
-bool
-intersectAABB(Ray ray, vec3 aabbMin, vec3 aabbMax)
+float
+intersectAABB(vec3 origin, vec3 inverseDir, vec3 aabbMin, vec3 aabbMax)
 {
   // Ray is assumed to be in local coordinates, ie:
   // ray = inverse(objectMatrix * invCameraMatrix) * ray
 
   // Equation of ray: O + D * t
 
-  vec3 invRay = 1.0 / ray.dir;
-  vec3 tbottom = invRay * (aabbMin - ray.origin);
-  vec3 ttop = invRay * (aabbMax - ray.origin);
+  vec3 tbottom = inverseDir * (aabbMin - origin);
+  vec3 ttop = inverseDir * (aabbMax - origin);
 
   vec3 tmin = min(ttop, tbottom);
   vec3 tmax = max(ttop, tbottom);
 
-  float largestMin = max(max(tmin.x, tmin.y), max(tmin.x, tmin.z));
   float smallestMax = min(min(tmax.x, tmax.y), min(tmax.x, tmax.z));
+  float largestMin = max(max(tmin.x, tmin.y), max(tmin.x, tmin.z));
 
-  return smallestMax > largestMin;
+  if (smallestMax < largestMin || smallestMax < 0.0) { return MAX_FLOAT; }
+  return (largestMin > 0.0) ? largestMin : smallestMax;
+}
+
+float
+intersectAABB(Ray ray, vec3 aabbMin, vec3 aabbMax)
+{
+  return intersectAABB(ray.origin, 1.0 / ray.dir, aabbMin, aabbMax);
 }
 
 float
@@ -365,47 +371,77 @@ sceneHit(Ray ray, inout Intersection intersection)
 
     // Performs intersection in model space.
     Ray rayModel = transformRay(ray, instance.worldToModel);
-    // Ray rayModel = ray;
+    vec3 rayInverseDir = 1.0 / rayModel.dir;
 
     #ifdef DEBUG_BOX
     float depth = 1.0;
     #endif
 
     uint nextIndex = instance.bvhRootIndex;
+
     while (nextIndex != INVALID_UINT)
     {
       BVHNode node = nodes[nextIndex];
 
-      // Node is a leaf.
-      if (node.primitiveStartIndex != INVALID_UINT)
+      float d = intersectAABB(rayModel.origin, rayInverseDir, node.min, node.max);
+      if (d < MAX_FLOAT && d < dist)
       {
-        #ifdef DEBUG_BOX
-        // intersection.emissive += vec3(0.0, 0.0, 0.05);
-        #endif
-
-        float t = intersectTriangle(rayModel, node.primitiveStartIndex, uv);
-        if (t > 0.0 && t < dist)
+        if (node.primitiveStartIndex != INVALID_UINT)
         {
-          intersection.uv = uv;
-          intersection.index = node.primitiveStartIndex;
-          intersection.instance = i;
-          // TODO: remove material as we now pass instance directly.
-          intersection.materialIndex = instance.materialIndex;
-          intersection.emitter = false;
-          dist = t;
+          float t = intersectTriangle(rayModel, node.primitiveStartIndex, uv);
+          if (t > 0.0 && t < dist)
+          {
+            intersection.uv = uv;
+            intersection.index = node.primitiveStartIndex;
+            intersection.instance = i;
+            // TODO: remove material as we now pass instance directly.
+            intersection.materialIndex = instance.materialIndex;
+            intersection.emitter = false;
+            dist = t;
+          }
+          nextIndex = node.nextNodeIndex;
+          continue;
         }
+        nextIndex++;
+      }
+      else
+      {
         nextIndex = node.nextNodeIndex;
       }
-      else if (intersectAABB(rayModel, node.min, node.max))
-      {
-        #ifdef DEBUG_BOX
-        intersection.emissive += vec3(1.0 - (1.0 / depth), 0.0, 0.0);
-        depth += 0.55;
-        #endif
-        nextIndex++;
-        continue;
-      }
-      nextIndex = node.nextNodeIndex;
+
+      // // Node is a leaf.
+      // if (node.primitiveStartIndex != INVALID_UINT)
+      // {
+      //   #ifdef DEBUG_BOX
+      //   intersection.emissive += vec3(0.0, 0.0, 0.001);
+      //   #endif
+
+      //   float t = intersectTriangle(rayModel, node.primitiveStartIndex, uv);
+      //   if (t > 0.0 && t < dist)
+      //   {
+      //     intersection.uv = uv;
+      //     intersection.index = node.primitiveStartIndex;
+      //     intersection.instance = i;
+      //     // TODO: remove material as we now pass instance directly.
+      //     intersection.materialIndex = instance.materialIndex;
+      //     intersection.emitter = false;
+      //     dist = t;
+      //   }
+      //   nextIndex = node.nextNodeIndex;
+      //   continue;
+      // }
+
+      // float d = intersectAABB(rayModel.origin, rayInverseDir, node.min, node.max);
+      // if (d < MAX_FLOAT && d < dist)
+      // {
+      //   #ifdef DEBUG_BOX
+      //   intersection.emissive += vec3(1.0 - (1.0 / depth), 0.0, 0.0);
+      //   depth += 0.55;
+      //   #endif
+      //   nextIndex++;
+      //   continue;
+      // }
+      // nextIndex = node.nextNodeIndex;
     }
   }
 

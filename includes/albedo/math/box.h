@@ -65,8 +65,9 @@ struct Box3
   inline uint8_t
   maximumExtent()
   {
-    if (max.x > max.y && max.x > max.z) { return 0; }
-    return max.y > max.z ? 1 : 2;
+    const auto span = max - min;
+    if (span.x > span.y && span.x > span.z) { return 0; }
+    return span.y > span.z ? 1 : 2;
   }
 
   inline bool

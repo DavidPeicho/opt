@@ -48,19 +48,16 @@ class FlattenTask {
       m_output.insert(m_output.begin() + m_curr, BVHNodeGPU {
         .min = node.aabb.min,
         .max = node.aabb.max,
-        .nextNodeIndex = BVHNode::InvalidValue,
+        .nextNodeIndex = getRelativeIndex(missIndex),
         .primitiveStartIndex = BVHNode::InvalidValue
         // .oldIndex = inputIndex
       });
       auto& resultNode = m_output[m_curr];
       m_curr++;
 
-      resultNode.nextNodeIndex = getRelativeIndex(missIndex);
-
       if (node.isLeaf())
       {
         resultNode.primitiveStartIndex = getRelativePrimitiveIndex(node.primitiveStartIndex);
-        // resultNode.primitiveStartIndex = BVHNode::InvalidValue;
         return;
       }
 
