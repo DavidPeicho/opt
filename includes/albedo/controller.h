@@ -58,6 +58,9 @@ class CameraController
     float m_moveDamping;
     float m_rotationDamping;
 
+    float m_currMoveDamping;
+    float m_currRotDamping;
+
     bool m_dirty;
 };
 
@@ -82,22 +85,25 @@ class FPSCameraController: public CameraController
     rotate(const glm::vec2& direction);
 
     void
-    forward(float distance = 1.0);
+    forward();
 
     void
-    backward(float distance = 1.0);
+    backward();
 
     void
-    left(float distance = 1.0);
+    left();
 
     void
-    right(float distance = 1.0);
+    right();
 
   private:
+    glm::vec3 m_velocity;
+    glm::vec2 m_angularVelocity;
 
-    glm::vec3 m_localVelocity;
-    glm::vec2 m_localRotVelocity;
-
+    bool m_moveLeft;
+    bool m_moveRight;
+    bool m_moveForward;
+    bool m_moveBackward;
 };
 
 } // namespace albedo

@@ -1,7 +1,9 @@
 #include <albedo/controller.h>
 
+#include <glm/common.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
+
 
 // DEBUG
 #include <glm/gtx/string_cast.hpp>
@@ -15,10 +17,12 @@ CameraController::CameraController(glm::vec3 origin, glm::vec3 target)
   , m_target{target}
   , m_up{glm::vec3(0.0, 1.0, 0.0)}
   , m_right{glm::vec3(1.0, 0.0, 0.0)}
-  , m_moveSpeed{0.1}
+  , m_moveSpeed{1.0}
   , m_rotSpeed{1.0}
-  , m_moveDamping{15.0}
-  , m_rotationDamping{8.0}
+  , m_moveDamping{0.5}
+  , m_rotationDamping{0.5}
+  , m_currMoveDamping{0.0}
+  , m_currRotDamping{0.0}
   , m_dirty{false}
 { }
 
@@ -26,8 +30,12 @@ FPSCameraController::FPSCameraController(
   glm::vec3 origin,
   glm::vec3 target) noexcept
   : CameraController(origin, target)
-  , m_localVelocity{glm::vec3(0.0)}
-  , m_localRotVelocity{glm::vec2(0.0)}
+  , m_moveLeft{false}
+  , m_moveRight{false}
+  , m_moveForward{false}
+  , m_moveBackward{false}
+  , m_velocity{glm::vec3(0.0)}
+  , m_angularVelocity{glm::vec2(0.0)}
 { }
 
 void
@@ -37,15 +45,20 @@ FPSCameraController::update(float deltaTime)
   static constexpr glm::vec3 ZERO_VECTOR3(0.0, 0.0, 0.0);
   static constexpr glm::vec2 ZERO_VECTOR2(0.0, 0.0);
 
-  m_dirty = glm::any(glm::epsilonNotEqual(m_localVelocity, ZERO_VECTOR3, 0.0001f))
-            || glm::any(glm::epsilonNotEqual(m_localRotVelocity, ZERO_VECTOR2, 0.0001f));
+  if (m_moveForward) { m_velocity.z += m_moveSpeed; }
+  if (m_moveBackward) { m_velocity.z -= m_moveSpeed; }
+  if (m_moveRight) { m_velocity.x += m_moveSpeed; }
+  if (m_moveLeft) { m_velocity.x -= m_moveSpeed; }
+
+  m_dirty = glm::any(glm::epsilonNotEqual(m_velocity, ZERO_VECTOR3, 0.0001f))
+            || glm::any(glm::epsilonNotEqual(m_angularVelocity, ZERO_VECTOR2, 0.0001f));
 
   if (!m_dirty) { return; }
 
   // Computes new rotation.
-  auto rotVel = m_localRotVelocity * m_rotationDamping * deltaTime;
-  auto rot = glm::angleAxis(- rotVel.x * m_rotSpeed, m_up)
-            * glm::angleAxis(- rotVel.y * m_rotSpeed, m_right);
+  auto rotVel = m_angularVelocity * m_rotSpeed * deltaTime ;
+  auto rot = glm::angleAxis(- rotVel.x, m_up)
+            * glm::angleAxis(- rotVel.y, m_right);
 
   auto direction = getDirection();
   direction = glm::normalize(rot * direction);
@@ -54,47 +67,52 @@ FPSCameraController::update(float deltaTime)
   m_up = glm::normalize(glm::cross(m_right, direction));
 
   // Computes new position.
-  auto moveVel = m_localVelocity * m_moveDamping * deltaTime;
-  auto worldTranslation = moveVel.x * m_right + moveVel.z * direction;
-  worldTranslation *= m_moveSpeed;
-
-  auto test = m_origin;
-  m_origin += worldTranslation;
+  auto forceWorld = m_velocity.x * m_right + m_velocity.z * direction;
+  m_origin += forceWorld * m_moveSpeed * deltaTime;
   m_target = m_origin + direction;
 
   // Damping
-  m_localVelocity -= moveVel;
-  m_localRotVelocity -= rotVel;
+  float invDelta = (1.0f / deltaTime);
+  m_velocity *= 1.0 - glm::clamp(m_moveDamping ,0.05f, 0.99f);
+  m_angularVelocity *= glm::clamp(
+    (1.0f - m_rotationDamping) * (1.0f - invDelta),
+    0.0f, 1.0f
+  );
+
+  m_moveForward = false;
+  m_moveBackward = false;
+  m_moveRight = false;
+  m_moveLeft = false;
 }
 
 void
 FPSCameraController::rotate(const glm::vec2& direction)
 {
-  m_localRotVelocity = direction;
+  m_angularVelocity += direction;
 }
 
 void
-FPSCameraController::forward(float distance)
+FPSCameraController::forward()
 {
-  m_localVelocity.z += distance;
+  m_moveForward = true;
 }
 
 void
-FPSCameraController::backward(float distance)
+FPSCameraController::backward()
 {
-  m_localVelocity.z -= distance;
+  m_moveBackward = true;
 }
 
 void
-FPSCameraController::left(float distance)
+FPSCameraController::left()
 {
-  m_localVelocity.x -= distance;
+  m_moveLeft = true;
 }
 
 void
-FPSCameraController::right(float distance)
+FPSCameraController::right()
 {
-  m_localVelocity.x += distance;
+  m_moveRight = true;
 }
 
 } // namespace albedo

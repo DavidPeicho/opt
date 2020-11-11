@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <numeric>
 #include <iostream>
+
 namespace albedo
 {
 
@@ -18,8 +20,9 @@ getBinIndex(
 )
 {
   float normalized = (centerOnAxis - centroidBoxMinOnAxis) / spanOnAxis;
-  auto index = std::min(
-    BinCount * static_cast<Mesh::IndexType>(normalized),
+  auto index = std::clamp(
+    static_cast<Mesh::IndexType>(normalized * static_cast<float>(BinCount)),
+    static_cast<Mesh::IndexType>(0),
     BinCount - 1
   );
   return index;
@@ -45,10 +48,9 @@ findBestSplit(
   for (Mesh::IndexType i = BinCount - 1; i >= 1; --i)
   {
     auto& bin = bins[i];
-    nbTriangles += bin.nbPrimitives;
     aabb.expand(bin.aabb);
-    bin.rightCost = (float)nbTriangles * aabb.getSurfaceArea();
-    // std::cout << "bin " << i << " " << aabb.toString() << std::endl;
+    nbTriangles += bin.nbPrimitives;
+    bin.rightCost = static_cast<float>(nbTriangles) * aabb.getSurfaceArea();
   }
 
   //
@@ -67,16 +69,16 @@ findBestSplit(
   for (Mesh::IndexType i = 0; i < BinCount - 1; ++i)
   {
     const auto& bin = bins[i];
-    nbTriangles += bin.nbPrimitives;
     aabb.expand(bin.aabb);
+    nbTriangles += bin.nbPrimitives;
     // SAH theory states that the cost is relative to the probability of
     // intersecting the sub area. However, we are simply comparing the cost,
     // so the division can be skipped.
-    auto cost = ((float)nbTriangles * aabb.getSurfaceArea()) + bin.rightCost;
+    auto cost = ((float)nbTriangles * aabb.getSurfaceArea()) + bins[i + 1].rightCost;
     if (cost < minCost)
     {
       minCost = cost;
-      splitIndex = i;
+      splitIndex = i + 1;
     }
   }
 
@@ -111,8 +113,11 @@ recursiveBuild(
   node.aabb = box;
   node.center = box.center();
 
-  const auto axis = box.maximumExtent();
-  const auto spanOnAxis = centroidsBox.max[axis] - centroidsBox.min[axis];
+  // The split is based on the largest dimension.
+  const auto splitAxis = centroidsBox.maximumExtent();
+  const auto splitAxisLen = centroidsBox.max[splitAxis] - centroidsBox.min[splitAxis];
+
+  // @todo: if the axis len is too small, split in half.
 
   //
   // Step 1: initializes every bin computing, for each triangle, its associated
@@ -128,11 +133,11 @@ recursiveBuild(
   for (Mesh::IndexType i = start; i < end; ++i)
   {
     const auto& node = nodes[i];
-    const auto centerOnAxis = node.center[axis];
+    const auto centerOnAxis = node.center[splitAxis];
     const auto binIndex = getBinIndex<BinCount>(
       centerOnAxis,
-      centroidsBox.min[axis],
-      spanOnAxis
+      centroidsBox.min[splitAxis],
+      splitAxisLen
     );
     auto& bin = bins[binIndex];
     bin.nbPrimitives++;
@@ -140,17 +145,23 @@ recursiveBuild(
   }
 
   auto splitIndex = findBestSplit<BinCount>(bins, start, end);
+  // std::cout << "ITERATING" << std::endl;
   auto iterator = std::partition(
     nodes.begin() + start,
-    nodes.begin() + end - 1,
+    nodes.begin() + end,
     [&](const BVHNode& node) {
-      const auto centerOnAxis = node.center[axis];
-      const auto i = getBinIndex<BinCount>(centerOnAxis, centroidsBox.min[axis], spanOnAxis);
-      return i <= splitIndex;
+      const auto centerOnAxis = node.center[splitAxis];
+      const auto i = getBinIndex<BinCount>(centerOnAxis, centroidsBox.min[splitAxis], splitAxisLen);
+      return i < splitIndex;
   });
 
   Mesh::IndexType mid = iterator - nodes.begin();
-  if (mid == start) { mid = (start + end) * 0.5; }
+  if (mid <= start || mid >= end)
+  {
+    // @todo: find why it mostly ends up here.
+    // std::cout << "HALF" << std::endl;
+    mid = (start + end) * 0.5;
+  }
 
   auto leftChild = recursiveBuild<BinCount>(nodes, bins, start, mid);
   auto rightChild = recursiveBuild<BinCount>(nodes, bins, mid, end);
@@ -182,14 +193,6 @@ SAHBuilder<BinCount>::build(const Mesh& mesh)
 {
   auto nbTriangles = mesh.getTrianglesCount();
   if (nbTriangles == 0) { return; }
-
-  // Initializes bin.
-  for (auto& bin: m_bins)
-  {
-    bin.nbPrimitives = 0;
-    bin.aabb.makeEmpty();
-    bin.rightCost = 0.0;
-  }
 
   const auto& vertices = mesh.getVertexBuffer();
   const auto& indices = mesh.getIndices();

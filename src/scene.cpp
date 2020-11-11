@@ -55,23 +55,32 @@ class FlattenTask {
       auto& resultNode = m_output[m_curr];
       m_curr++;
 
+      resultNode.nextNodeIndex = getRelativeIndex(missIndex);
+
+      if (node.isLeaf())
+      {
+        resultNode.primitiveStartIndex = getRelativePrimitiveIndex(node.primitiveStartIndex);
+        // resultNode.primitiveStartIndex = BVHNode::InvalidValue;
+        return;
+      }
+
       if (node.leftChild != BVHNode::InvalidValue)
       {
         const auto& leftChild = inputs[node.leftChild];
-        auto childMissIndex = leftChild.forestSize + count() + 1;
-        flatten(inputs, node.leftChild, childMissIndex);
+        if (node.rightChild != BVHNode::InvalidValue)
+        {
+          auto childMissIndex = leftChild.forestSize + count() + 1;
+          flatten(inputs, node.leftChild, childMissIndex);
+        }
+        else
+        {
+          flatten(inputs, node.leftChild, missIndex);
+        }
       }
       if (node.rightChild != BVHNode::InvalidValue)
       {
         flatten(inputs, node.rightChild, missIndex);
       }
-      if (node.isLeaf())
-      {
-        resultNode.primitiveStartIndex = getRelativePrimitiveIndex(node.primitiveStartIndex);
-      }
-      resultNode.nextNodeIndex = missIndex != BVHNode::InvalidValue ?
-        getRelativeIndex(missIndex)
-        : BVHNode::InvalidValue;
     }
 
   private:
@@ -79,7 +88,7 @@ class FlattenTask {
     inline Mesh::IndexType
     getRelativeIndex(Mesh::IndexType index)
     {
-      return m_start + index;
+      return index != BVHNode::InvalidValue ? m_start + index : BVHNode::InvalidValue;
     }
 
     inline Mesh::IndexType
@@ -183,6 +192,7 @@ Scene::build()
     // TODO: discard empty BVH.
     SAHBuilder builder(m->getBVH());
     builder.build(*m);
+
     totalNumberVertices += m->getVertexBuffer().size();
     totalNumberNodes += m->getBVH().nodes.size();
     totalNumberIndices += m->getIndices().size();
@@ -312,6 +322,10 @@ Scene::update()
       // std::cout << glm::to_string(gpuInstance.worldToModel) << std::endl;
     }
   }
+
+  #if 1
+  std::cout << "  -> Instances: " <<  m_instances.size() << std::endl;
+  #endif
 
   return *this;
 }

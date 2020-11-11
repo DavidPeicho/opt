@@ -19,14 +19,14 @@ struct Box3
 
   Box3()
     : min{std::numeric_limits<float>::max()}
-    , max{- std::numeric_limits<float>::min()}
+    , max{- std::numeric_limits<float>::max()}
   { }
 
   inline Box3&
   makeEmpty()
   {
     min = glm::vec3(std::numeric_limits<float>::max());
-    max = glm::vec3(- std::numeric_limits<float>::min());
+    max = glm::vec3(- std::numeric_limits<float>::max());
     return *this;
   }
 
@@ -59,7 +59,7 @@ struct Box3
   getSurfaceArea()
   {
     const auto d = diagonal();
-    return 2.0 * glm::length2(d);
+    return 2.0 * (d.x * d.y + d.x * d.z + d.y * d.z);
   }
 
   inline uint8_t

@@ -8,7 +8,6 @@
 #include <albedo/mesh.h>
 #include <albedo/scene.h>
 
-#define TINYGLTF_NO_STB_IMAGE
 #include <albedoloader/tiny_gltf.h>
 
 namespace albedo

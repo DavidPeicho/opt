@@ -22,10 +22,12 @@
 #include <albedo/wgpu.h>
 
 // @todo: that's gross, fix that.
-#define STB_IMAGE_IMPLEMENTATION
+#pragma STB_IMAGE_IMPLEMENTATION
 #include "plugins/includes/albedoloader/stb_image.h"
 
 #include <glm/glm.hpp>
+
+#include <chrono>
 
 namespace albedo
 {
@@ -93,6 +95,13 @@ App::App()
     (void*)&adapterId
   );
 
+  char name[512];
+  WGPUCAdapterInfo info;
+  info.name = name;
+  wgpu_adapter_get_info(adapterId, &info);
+
+  std::cout << "Using GPU: " << info.name << std::endl;
+
   WGPUCLimits limits {
     .max_bind_groups = 2
   };
@@ -109,7 +118,8 @@ App::App()
   glfwSetCursorPosCallback(m_window, App::mouseCallback);
 
   m_renderer.init(adapterId, surfaceId);
-  m_controller = new FPSCameraController(glm::vec3(0.0, 0.0, 10.0));
+  // m_controller = new FPSCameraController(glm::vec3(0.0, 0.0, 1.0));
+  m_controller = new FPSCameraController(glm::vec3(0.0, 1.0, 2.5));
 
   std::cout << "Loading probe..." << std::endl;
   int imgWidth = 0;
@@ -174,6 +184,10 @@ App::run() noexcept
   // Startup mouse position to avoid getting mouse jump.
   glfwGetCursorPos(m_window, &m_mouseCoords.x, &m_mouseCoords.y);
 
+  float fpsDisplayTimeout = 2.0;
+  uint frameCount = 0;
+  double averageFPS = 0.0;
+
   while (!glfwWindowShouldClose(m_window) && m_running)
   {
     float time = glfwGetTime();
@@ -210,9 +224,20 @@ App::run() noexcept
     m_renderer.startFrame(delta);
     m_renderer.endFrame();
 
-    glfwPollEvents();
+    fpsDisplayTimeout -= delta;
+    averageFPS += delta;
+    ++frameCount;
+    if (fpsDisplayTimeout <= 0.0)
+    {
+      std::cout << "[ INFO ]: FPS: " << (double) frameCount / averageFPS << std::endl;
+      fpsDisplayTimeout = 2.0;
+      averageFPS = 0.0;
+      frameCount = 0;
+    }
 
     lastTime = time;
+
+    glfwPollEvents();
   }
 }
 

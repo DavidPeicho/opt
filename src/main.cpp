@@ -43,11 +43,12 @@ int main()
   std::cout << "Loading scene..." << std::endl;
 
   albedo::loader::GLTFLoader loader;
-  // auto sceneOptional = loader.load("./scenes/cornell-box.glb");
-  auto sceneOptional = loader.load("./scenes/cornell-box-transforms.glb");
+  // auto sceneOptional = loader.load("./scenes/cornell-box-transforms.glb");
+  // auto sceneOptional = loader.load("./scenes/MetalRoughSpheres.glb");
+  auto sceneOptional = loader.load("./scenes/meetmat-head.glb");
   if (!sceneOptional)
   {
-    std::cerr << "Failed to load scene" << std::endl;
+    std::cerr << "[ ERROR ]: Terminating" << std::endl;
     return 1;
   }
 

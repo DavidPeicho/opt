@@ -21,7 +21,7 @@ struct Bin
 
 }
 
-template <Mesh::IndexType BinCount = 12>
+template <Mesh::IndexType BinCount = 8>
 class SAHBuilder
 {
 

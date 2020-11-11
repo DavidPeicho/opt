@@ -1,14 +1,17 @@
+#define JSON_NOEXCEPTION
+#define TINYGLTF_NOEXCEPTION
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_STB_IMAGE_WRITE
+#define TINYGLTF_NO_EXTERNAL_IMAGE
 #define STB_IMAGE_IMPLEMENTATION
 #include <albedoloader/gltf-loader.h>
 
+#include <filesystem>
 #include <type_traits>
 
 #include <albedo/components/material.h>
 #include <albedo/components/transform.h>
 #include <albedoloader/gltf-loader.h>
-
 #include <glm/common.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -73,17 +76,25 @@ GLTFLoader::load(const std::string& path)
 
   tinygltf::TinyGLTF loader;
 
-  // if (loader.LoadASCIIFromFile(&model, &err, &warn, path))
-  if (!loader.LoadBinaryFromFile(&model, &err, &warn, path))
+  bool success = false;
+  std::filesystem::path filePath = path;
+  if (filePath.extension() == ".glb") // Heed the dot.
   {
-    std::cout << "Failed to load" << std::endl;
-    std::cout << err << std::endl;
+    success = loader.LoadBinaryFromFile(&model, &err, &warn, path);
+  }
+  else
+  {
+    success = loader.LoadASCIIFromFile(&model, &err, &warn, path);
+  }
+
+  if (!success)
+  {
+    std::cout << "[ ERROR ]: Failed to load" << std::endl;
+    std::cout << "reason: " << err << std::endl;
     return std::nullopt;
   }
 
   Scene result;
-
-  std::cout << "NB SCENES " << model.scenes.size() << std::endl;
 
   processMaterials(result, model);
   processMeshes(result, model);
@@ -196,8 +207,6 @@ GLTFLoader::processNode(
   scene.addInstance(entity, InstanceData {
     .name = std::move(node.name) // Name will not be used again, this is safe.
   });
-
-  std::cout << "Processing node " << scene.data<InstanceData>(entity)->name << std::endl;
 
   auto& transforms = scene.transforms();
   components::Transform transform;

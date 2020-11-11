@@ -14,6 +14,9 @@
 #define MAX_UINT 0xFFFFFFFF
 #define INVALID_UINT MAX_UINT
 
+#define DEBUG_BOX
+#define NB_BOUNCES 2
+
 // TODO: move to intersection pass.
 struct Ray {
   vec3 origin;
@@ -364,6 +367,10 @@ sceneHit(Ray ray, inout Intersection intersection)
     Ray rayModel = transformRay(ray, instance.worldToModel);
     // Ray rayModel = ray;
 
+    #ifdef DEBUG_BOX
+    float depth = 1.0;
+    #endif
+
     uint nextIndex = instance.bvhRootIndex;
     while (nextIndex != INVALID_UINT)
     {
@@ -372,6 +379,10 @@ sceneHit(Ray ray, inout Intersection intersection)
       // Node is a leaf.
       if (node.primitiveStartIndex != INVALID_UINT)
       {
+        #ifdef DEBUG_BOX
+        // intersection.emissive += vec3(0.0, 0.0, 0.05);
+        #endif
+
         float t = intersectTriangle(rayModel, node.primitiveStartIndex, uv);
         if (t > 0.0 && t < dist)
         {
@@ -385,16 +396,20 @@ sceneHit(Ray ray, inout Intersection intersection)
         }
         nextIndex = node.nextNodeIndex;
       }
-      else if (!intersectAABB(rayModel, node.min, node.max))
+      else if (intersectAABB(rayModel, node.min, node.max))
       {
-        nextIndex = node.nextNodeIndex;
-      }
-      else
-      {
+        #ifdef DEBUG_BOX
+        intersection.emissive += vec3(1.0 - (1.0 / depth), 0.0, 0.0);
+        depth += 0.55;
+        #endif
         nextIndex++;
+        continue;
       }
+      nextIndex = node.nextNodeIndex;
     }
   }
+
+  // intersection.emissive.b = test / 8000.0;
   return dist;
 }
 
@@ -413,18 +428,27 @@ void main()
   vec4 radiance = vec4(vec3(0.0), 1.0);
 
   Intersection intersection;
-  for (uint bounces = 0; bounces < 4; ++bounces)
+  #ifdef DEBUG_BOX
+  for (uint bounces = 0; bounces < 1; ++bounces)
+  #else
+  for (uint bounces = 0; bounces < NB_BOUNCES; ++bounces)
+  #endif
   {
     intersection.emissive = vec3(0.0);
     intersection.emitter = false;
 
     float t = sceneHit(ray, intersection);
+
+    #ifdef DEBUG_BOX
+    radiance = vec4(intersection.emissive, 1.0);
+    break;
+    #endif
+
     if (t >= MAX_FLOAT)
     {
       vec2 uv = cartesianToEqui(ray.dir);
       vec3 sky = texture(sampler2D(uProbe, uProbeSampler), uv).rgb;
-      // radiance.rgb += throughput * sky;
-      radiance.rgb += throughput;
+      radiance.rgb += throughput * sky;
       break;
     }
 
