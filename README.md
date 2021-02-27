@@ -2,7 +2,9 @@
 
 Rough attempt at creating a real-time Pathtracer in C++ using [wgpu-native](https://github.com/gfx-rs/wgpu-native)
 
-![Rendering](./demo.gif)
+<p align="center">
+  <img src="./demo.gif"></img>
+</p>
 
 🚧 **STATUS**: this project was only created as a playground for WebGPU. I will not
 continue to work on it.
