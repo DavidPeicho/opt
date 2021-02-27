@@ -6,8 +6,8 @@ Rough attempt at creating a real-time Pathtracer in C++ using [wgpu-native](http
   <img src="./demo.gif"></img>
 </p>
 
-🚧 **STATUS**: this project was only created as a playground for WebGPU. I will not
-continue to work on it.
+🚧 **STATUS**: this project was only created as a playground for WebGPU. It is not ready at all,
+and I will not continue to work on it.
 
 If you wish to follow the development of this project, I am working right now
 on a clean and stable version in Rust in the [Albedo organization](https://github.com/albedo-engine/albedo).
