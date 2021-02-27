@@ -87,10 +87,10 @@ App::App()
     .power_preference = WGPUPowerPreference_HighPerformance,
     .compatible_surface = surfaceId
   };
+
   wgpu_request_adapter_async(
     &adapterOptions,
     2 | 4 | 8,
-    false,
     App::adapterCallback,
     (void*)&adapterId
   );
@@ -128,7 +128,6 @@ App::App()
   float *data = stbi_loadf("./scenes/uffizi-large.hdr", &imgWidth, &imgHeight, &imgComp, 4);
   if (data && imgWidth > 0 && imgHeight > 0 && imgComp > 0)
   {
-    std::cout << imgComp << std::endl;
     m_renderer.setProbe(
       data,
       static_cast<uint>(imgWidth),

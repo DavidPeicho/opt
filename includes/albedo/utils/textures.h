@@ -1,0 +1,6 @@
+namespace albedo
+{
+
+
+
+} // namespace albedo

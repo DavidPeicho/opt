@@ -160,9 +160,16 @@ Scene::addMeshes(const std::vector<Mesh::MeshPtr>& meshes)
 }
 
 Scene&
-Scene::addMaterial(Material&& material)
+Scene::addMaterial(components::Material&& material)
 {
   m_materials.emplace_back(std::move(material));
+  return *this;
+}
+
+Scene&
+Scene::setTexturesInfo(TexturesInfo&& info)
+{
+  m_texturesInfo = std::move(info);
   return *this;
 }
 

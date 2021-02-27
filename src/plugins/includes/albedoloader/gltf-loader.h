@@ -16,12 +16,25 @@ namespace albedo
 namespace loader
 {
 
+enum ResizePolicy
+{
+  Smallest
+};
+
+struct LoaderOptions
+{
+  ResizePolicy resizePolicy;
+};
+
 class GLTFLoader
 {
   public:
 
     std::optional<Scene>
     load(const std::string& path);
+
+    std::optional<Scene>
+    load(const std::string& path, const LoaderOptions& opts);
 
   public:
 

@@ -14,7 +14,7 @@
 #include <albedo/components/light.h>
 #include <albedo/components/transform.h>
 #include <albedo/entity.h>
-#include <albedo/material.h>
+#include <albedo/components/material.h>
 #include <albedo/mesh.h>
 #include <albedo/utils/index.h>
 #include <albedo/utils/optional-ref.h>
@@ -80,6 +80,13 @@ struct LightGPU
   float padding_2;
 };
 
+struct TexturesInfo
+{
+  std::vector<std::vector<unsigned char>> textures;
+  uint width;
+  uint height;
+};
+
 // TODO: add method to synchronize resources. What happens if the layout
 // of the ResourceManager changes, we need to sync everything.
 class Scene
@@ -114,7 +121,10 @@ class Scene
     addMeshes(const std::vector<Mesh::MeshPtr>& meshes);
 
     Scene&
-    addMaterial(Material&& material);
+    addMaterial(components::Material&& material);
+
+    Scene&
+    setTexturesInfo(TexturesInfo&& info);
 
     // TODO: remove material.
 
@@ -139,7 +149,7 @@ class Scene
     // TODO: improve material API.
     // Right now, it's hard to use, and hard not to make mistakes...
     // When removing a material what happens to the entity pointing to it?
-    inline Material&
+    inline components::Material&
     getMaterial(size_t index)
     {
       return m_materials[index];
@@ -163,9 +173,10 @@ class Scene
     TransformManager m_transforms;
 
     std::vector<Mesh::MeshPtr> m_meshes;
+    TexturesInfo m_texturesInfo;
 
     std::vector<InstanceGPU> m_instances;
-    std::vector<Material> m_materials;
+    std::vector<components::Material> m_materials;
     std::vector<LightGPU> m_lights;
     std::vector<Vertex> m_vertices; // Vertices of **all** BVH.
     std::vector<Mesh::IndexType> m_indices; // Indices of **all** BVH.

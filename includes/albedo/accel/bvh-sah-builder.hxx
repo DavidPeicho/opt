@@ -119,19 +119,6 @@ recursiveBuild(
 
   // @todo: if the axis len is too small, split in half.
 
-  if (splitAxis != 1)
-  {
-    std::cout << uint(splitAxis) << std::endl;
-  }
-  // if (splitAxisLen < 0.01)
-  // {
-  //   std::cout << "SMALLLLL" << std::endl;
-  // }
-  // else
-  // {
-  //   std::cout << "BIGGGGGGGG" << std::endl;
-  // }
-
   //
   // Step 1: initializes every bin computing, for each triangle, its associated
   // bin. Each bin bounding box and number of primitives is updated.

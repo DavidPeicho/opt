@@ -122,8 +122,9 @@ namespace
       uniformsBindGroupLayout->id()
     });
 
+    auto comp = readFile("./src/shaders/pathtrace.comp.spv");
     WGPUShaderModuleId module = wgpu_device_create_shader_module(
-      deviceId, readFile("./src/shaders/debug.comp.spv")
+      deviceId, &comp
     );
 
     pipeline.bindShader(module, "main");
@@ -162,11 +163,13 @@ namespace
     auto pipelineLayout = std::make_shared<backend::PipelineLayout>();
     pipelineLayout->create(deviceId, { bindGroupLayout->id() });
 
+    const auto vs = readFile("./src/shaders/blitting.vert.spv");
     WGPUShaderModuleId vertexShader = wgpu_device_create_shader_module(
-      deviceId, readFile("./src/shaders/blitting.vert.spv")
+      deviceId, &vs
     );
+    const auto fs = readFile("./src/shaders/blitting.frag.spv");
     WGPUShaderModuleId fragmentShader = wgpu_device_create_shader_module(
-      deviceId, readFile("./src/shaders/blitting.frag.spv")
+      deviceId, &fs
     );
 
     pipeline.bindVertexShader(vertexShader, "main");
@@ -182,7 +185,7 @@ Renderer::Renderer() noexcept
   m_info.height = 0;
   m_info.frameCount = 1;
   m_uniforms.time = 0.0;
-  m_swapChainDescriptor.usage = WGPUTextureUsage_OUTPUT_ATTACHMENT;
+  m_swapChainDescriptor.usage = WGPUTextureUsage_RENDER_ATTACHMENT;
   m_swapChainDescriptor.format = WGPUTextureFormat_Bgra8Unorm;
   m_swapChainDescriptor.present_mode = WGPUPresentMode_Fifo;
   m_swapChainDescriptor.width = 0;
@@ -230,6 +233,66 @@ Renderer::buildTLAS(const Scene& scene)
   m_uniformsBuffer.setUsage(WGPUBufferUsage_COPY_DST | WGPUBufferUsage_UNIFORM);
   m_uniformsBuffer.setSize(1);
   m_uniformsBuffer.create(m_deviceId);
+
+  // The code to upload texture was either wrong on my side, or wrong in the
+  // wgpu version I had. I didn't have time to investigate that further.
+
+  // if (scene.m_texturesInfo.textures.size() > 0)
+  // {
+  //   const uint32_t width = scene.m_texturesInfo.width;
+  //   const uint32_t height = scene.m_texturesInfo.height;
+  //   const uint32_t depth = scene.m_texturesInfo.textures.size();
+
+  //   std::cout << "NB textures = " << depth << std::endl;
+  //   std::cout << "Texture size = (" << width << ", " << height << ")" << std::endl;
+
+  //   // TODO: dispose textures when uploaded?
+  //   m_textures.setDescriptor(WGPUTextureDescriptor {
+  //     .label = "textures",
+  //     .size = WGPUExtent3d { .width = width, .height = height, .depth = depth },
+  //     .mip_level_count = 1,
+  //     .sample_count = 1,
+  //     .dimension = WGPUTextureDimension_D2,
+  //     .format = WGPUTextureFormat_Rgba8Uint,
+  //     .usage = WGPUTextureUsage_SAMPLED | WGPUTextureUsage_COPY_DST
+  //   });
+
+  //   m_textures.create(m_deviceId);
+
+  //   auto queue = wgpu_device_get_default_queue(m_deviceId);
+
+  //   const auto extent = WGPUExtent3d { .width = width, .height = height, .depth = 1 };
+
+  //   for (uint32_t i = 0; i < depth; ++i) {
+
+  //     auto view = WGPUTextureCopyView {
+  //       .texture = m_probe.id(),
+  //       .mip_level = 0,
+  //       .origin = { .x = 0, .y = 0, .z = i },
+  //     };
+  //     const auto* data = &scene.m_texturesInfo.textures[i][0];
+  //     // TODO: this assumes the images are RGBA...
+  //     // TODO: this assumes the images are unsigned char...
+  //     uint32_t bytes_per_row = 4 * sizeof (unsigned char) * width;
+  //     uint32_t bytes_total = bytes_per_row * height;
+
+  //     std::cout << bytes_total << std::endl;
+
+  //     auto layout = WGPUTextureDataLayout {
+  //       .offset = 0,
+  //       .bytes_per_row = bytes_per_row,
+  //       .rows_per_image = height
+  //     };
+  //     wgpu_queue_write_texture(
+  //       queue,
+  //       &view,
+  //       reinterpret_cast<const uint8_t*>(data),
+  //       bytes_total,
+  //       &layout,
+  //       &extent
+  //     );
+  //   }
+  // }
 
   m_cameraUniformsBuffer.setUsage(WGPUBufferUsage_COPY_DST | WGPUBufferUsage_UNIFORM);
   m_cameraUniformsBuffer.setSize(1);
@@ -371,9 +434,9 @@ Renderer::resize(uint32_t width, uint32_t height)
 Renderer&
 Renderer::startFrame(float deltaTime)
 {
-  WGPUSwapChainOutput nextSwapTexture = wgpu_swap_chain_get_next_texture(m_swapChainId);
+  WGPUOption_TextureViewId nextSwapTexture = wgpu_swap_chain_get_current_texture_view(m_swapChainId);
   // TODO: add error handling
-  if (!nextSwapTexture.view_id)
+  if (!nextSwapTexture)
   {
     std::cout << "Cant acquire swap chaint texture" << std::endl;
     return *this;
@@ -396,10 +459,9 @@ Renderer::startFrame(float deltaTime)
     .label = "command encoder"
   };
 
-  WGPURenderPassColorAttachmentDescriptor
-    colorAttachments[1] = {
+  WGPUColorAttachmentDescriptor colorAttachments[1] = {
       {
-        .attachment = nextSwapTexture.view_id,
+        .attachment = nextSwapTexture,
         .resolve_target = 0,
         .channel = {
             .load_op = WGPULoadOp_Clear,

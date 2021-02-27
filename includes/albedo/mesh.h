@@ -15,6 +15,7 @@ struct Vertex
   uint32_t padding_0; // For GPU
   glm::vec3 normal;
   uint32_t padding_1; // For GPU
+  glm::vec2 uv;
   // TODO: add UV
 };
 

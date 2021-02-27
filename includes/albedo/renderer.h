@@ -125,6 +125,8 @@ class Renderer
     backend::Texture m_probe;
     backend::TextureSampler m_probeSampler;
 
+    backend::Texture m_textures;
+
     WGPUCommandEncoderId m_commandEncoder; // TODO: refactor out?
 
     backend::Buffer<RenderInfo> m_renderInfoBuffer;
@@ -132,7 +134,7 @@ class Renderer
     backend::Buffer<InstanceGPU> m_instanceBuffer;
     backend::Buffer<Vertex> m_vertexBuffer;
     backend::Buffer<Mesh::IndexType> m_indicesBuffer;
-    backend::Buffer<Material> m_materialBuffer;
+    backend::Buffer<components::Material> m_materialBuffer;
     backend::Buffer<LightGPU> m_lightsBuffer;
     backend::Buffer<Uniforms> m_uniformsBuffer;
     backend::Buffer<CameraUniforms> m_cameraUniformsBuffer;

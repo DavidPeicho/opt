@@ -70,11 +70,20 @@ namespace
 std::optional<Scene>
 GLTFLoader::load(const std::string& path)
 {
+  return load(path, LoaderOptions {
+    .resizePolicy = ResizePolicy::Smallest
+  });
+}
+
+std::optional<Scene>
+GLTFLoader::load(const std::string& path, const LoaderOptions& opts)
+{
   tinygltf::Model model;
   std::string err;
   std::string warn;
 
   tinygltf::TinyGLTF loader;
+  loader.SetPreserveImageChannels(false);
 
   bool success = false;
   std::filesystem::path filePath = path;
@@ -102,15 +111,6 @@ GLTFLoader::load(const std::string& path)
   // TODO: remove when ressource are refactored out of the scene.
   result.addMeshes(m_meshes);
 
-  if (model.scenes.size() == 0) {
-    std::cout << model.nodes.size() << std::endl;
-    for (const auto& node: model.nodes)
-    {
-      processNode(result, node, model);
-    }
-    return std::make_optional(std::move(result));
-  }
-
   for (const auto& glTFScene: model.scenes)
   {
     for (const auto nodeIndex: glTFScene.nodes)
@@ -120,6 +120,25 @@ GLTFLoader::load(const std::string& path)
     }
   }
 
+  // Processes all textures.
+  TexturesInfo texInfo;
+  for (auto& image: model.images)
+  {
+    // TODO: handle image of different sizes.
+    // TODO: tonemap high bit depth
+    // TODO: convert float to uchar?
+    texInfo.width = image.width;
+    texInfo.height = image.height;
+    if (image.image.size() == 0)
+    {
+      return std::nullopt;
+    }
+
+    texInfo.textures.emplace_back(std::move(image.image));
+  }
+
+  result.setTexturesInfo(std::move(texInfo));
+
   return std::make_optional(std::move(result));
 }
 
@@ -128,9 +147,18 @@ GLTFLoader::processMaterials(Scene& scene, const tinygltf::Model& model)
 {
   for (const auto& glTFMaterial: model.materials)
   {
-    const auto& albedo = glTFMaterial.pbrMetallicRoughness.baseColorFactor;
-    Material material;
+    const auto& pbr = glTFMaterial.pbrMetallicRoughness;
+    const auto& albedo = pbr.baseColorFactor;
+    components::Material material;
     material.color = glm::vec4(albedo[0], albedo[1], albedo[2], albedo[3]);
+    if (pbr.baseColorTexture.index >= 0)
+    {
+      material.albedoIndex = pbr.baseColorTexture.index;
+    }
+    if (pbr.metallicRoughnessTexture.index >= 0)
+    {
+      material.metalRoughnessIndex = pbr.metallicRoughnessTexture.index;
+    }
     scene.addMaterial(std::move(material));
   }
 }
@@ -165,6 +193,17 @@ GLTFLoader::processMeshes(Scene& scene, const tinygltf::Model& model)
         model, normalAccessor
       );
 
+      auto uvTuple = std::make_tuple<const glm::vec2*, size_t>(nullptr, 0);
+      if (primitive.attributes.find("TEXCOORD_0") != primitive.attributes.end())
+      {
+        const auto& uvAccessor = model.accessors[
+          primitive.attributes.at("TEXCOORD_0")
+        ];
+        uvTuple = getAccessorDataPointerAndStride<glm::vec2>(
+          model, uvAccessor
+        );
+      }
+
       uint32_t startIndex = mesh.getVertexBuffer().size();
 
       for (size_t i = 0; i < positionAccessor.count; ++i)
@@ -172,6 +211,11 @@ GLTFLoader::processMeshes(Scene& scene, const tinygltf::Model& model)
         Vertex v;
         v.position = positionsBuffer[positionStride * i];
         v.normal = normalBuffer[normalStride * i];
+        auto [ uvBuffer, uvStride ] = uvTuple;
+        if (uvBuffer != nullptr)
+        {
+          v.uv = uvBuffer[uvStride * i];
+        }
         // TODO: handle UVs
         mesh.getVertexBuffer().emplace_back(std::move(v));
       }

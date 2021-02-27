@@ -25,7 +25,7 @@ template <typename T>
 Buffer<T>::~Buffer() noexcept
 {
   // TODO: destroy the object.
-  wgpu_buffer_destroy(m_id);
+  wgpu_buffer_destroy(m_id, false);
 }
 
 template <typename T>
